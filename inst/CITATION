@@ -1,0 +1,18 @@
+citHeader("To cite sarp.snowprofile.alignment in publications use:")
+
+citEntry(
+  entry    = "Article",
+  title    = "Snow profile alignment and similarity assessment for aggregating, clustering, and evaluating of snowpack model output for avalanche forecasting",
+  author   = c(
+    person(given = "Florian", family = "Herla", role = c("aut", "cre"), email = "fherla@sfu.ca"),
+    person(given = "Simon", family = "Horton"),
+    person(given = "Patrick", family = "Mair"),
+    person(given = "Pascal", family = "Haegeli")
+    ),
+  journal  = "Geosci. Model Dev. Discuss.",
+  year     = "accepted, 2020",
+  textVersion = paste("Herla, F., Horton, S., Mair, P., and Haegeli, P.: Snow profile alignment and similarity assessment for aggregating, clustering, and evaluating of snowpack model output for avalanche forecasting, Geosci. Model Dev. Discuss., https://doi.org/10.5194/gmd-2020-171, accepted, 2020."
+  ),
+  doi      = "10.5194/gmd-2020-171"
+)
+
