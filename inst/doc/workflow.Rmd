@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 
 The package builds on `sarp.snowprofile` for basic data input/output, profile manipulation and visualization. 
 
-This vignette demonstrates the workflow of the analysis methods described in detail in *Herla, F., Horton, S., Mair, P., & Haegeli, P. (in review). Snow profile alignment and similarity assessment for aggregating, clustering, and evaluating of snowpack model output for avalanche forecasting.*
+This vignette demonstrates the workflow of the analysis methods described in detail in "Herla, F., Horton, S., Mair, P., and Haegeli, P.: Snow profile alignment and similarity assessment for aggregating, clustering, and evaluating of snowpack model output for avalanche forecasting, Geosci. Model Dev., https://doi.org/10.5194/gmd-14-239-2021, 2021."
 ```{r setup}
 library(sarp.snowprofile.alignment)
 ```
@@ -73,21 +73,26 @@ implementation. Read the vignette **Technical details** for more information.
 ## 2. Assessing the similarity of profiles
 
 The package provides a function `simSP` to calculate the similarity between two aligned profiles based on considerations 
-relevant for avalanche hazard assessment. The resulting similarity ranges between `[0, 1]`.
+relevant for avalanche hazard assessment. The resulting similarity ranges between `[0, 1]`. Note that the recent version of this package
+contains several different approaches of how that similarity measure is computed. See `?simSP` for more details.
 
-Some alignments require the calculation of that similarity score for choosing the best alignment. In that case, the score
-can be accessed from the alignment object via `$sim`. Otherwise, the score can be calculated by
+The similarity score can be accessed from the alignment object via `$sim`. 
+To use different methods for computing the score, provide the corresponding parameter `simType` to your function call to `dtwSP`.
+Otherwise, the score can be calculated for a precomputed alignment object by
 
 ```{r}
-dtwAlignment$sim <- simSP(dtwAlignment$reference, dtwAlignment$queryWarped, verbose = TRUE)
+dtwAlignment$sim <- simSP(dtwAlignment$reference, dtwAlignment$queryWarped, verbose = TRUE, type = "HerlaEtAl2021")
 ```
 
 ## 3. Clustering and aggregating profiles
 
 The above methods get even more interesting and useful when applied to sets of snow profiles in order to aggregate or cluster them.
-Therefor, the package provides `medoidSP`, which identifies the medoid profile among a set of profiles, and a wrapper function 
+Therefore, the package provides `medoidSP`, which identifies the medoid profile among a set of profiles, and a wrapper function 
 `distanceSP` (for `dtwSP` and `simSP`), which returns the distance between two profiles (i.e., a common input for clustering
 algorithms).
+
+Note that this vignette describes approaches from the Herla et al (2021) paper cited above. Both tasks, aggregating and clustering,
+need to and will be improved in future work to appropriately address operational needs. Check out new vignettes as the methods improve.
 
 ### 3.1 Clustering
 
@@ -99,7 +104,7 @@ rescale the set of profiles to identical snow heights before computing a pairwis
 setRR <- reScaleSampleSPx(SPgroup)$set
 
 ## compute the pairwise distance matrix:
-distmat <- medoidSP(setRR, retDistmat = T)$distmat
+distmat <- medoidSP(setRR, retDistmat = T, progressbar = FALSE, verbose = TRUE)$distmat
 
 ## hierarchichal clustering:
 setRR_hcl <- stats::hclust(as.dist(distmat), method = "complete")

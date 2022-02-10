@@ -35,7 +35,7 @@ The smallest common height grid is found by
 \enumerate{
 \item extract all unique layer interfaces in both profiles
 \item resample each profile with the above height grid, \cr
-(!) but set all height values that exceed each's max snowheight to that max snowheight!
+(!) but set all height values that exceed each's max snow height to that max snow height!
 }
 }
 \examples{
@@ -47,8 +47,8 @@ summary(SPpairs$A_modeled)[, c("hs", "nLayers")]
 opar <- par(no.readonly=TRUE)
 par(mfrow = c(1, 2))
 plot(SPpairs$A_manual, main = "Initial profiles before resampling",
-     ylab = "Snow height", ylim = c(0, 272))
-plot(SPpairs$A_modeled, ylab = "Snow height", ylim = c(0, 272))
+     ylab = "Snow height", ymax = 272)
+plot(SPpairs$A_modeled, ylab = "Snow height", ymax = 272)
 
 ## resampling:
 resampledSPlist <- resampleSPpairs(SPpairs$A_manual, SPpairs$A_modeled,
@@ -58,8 +58,8 @@ resampledSPlist <- resampleSPpairs(SPpairs$A_manual, SPpairs$A_modeled,
 summary(resampledSPlist$query)[, c("hs", "nLayers")]
 summary(resampledSPlist$ref)[, c("hs", "nLayers")]
 plot(resampledSPlist$query, main = "Profiles after resampling",
-     ylab = "Snow height", ylim = c(0, 272))
-plot(resampledSPlist$ref, ylab = "Snow height", ylim = c(0, 272))
+     ylab = "Snow height", ymax = 272)
+plot(resampledSPlist$ref, ylab = "Snow height", ymax = 272)
 par(opar)
 
 }

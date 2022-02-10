@@ -89,28 +89,35 @@ resampleSP <- function(x, h = 0.5, n = NULL) {
                       length.out = r_n)          # resampled height vector
     }
   }
+  ## don't allow unobservedBasalLayer (i.e., NA layers) to be resampled
+  if (hasUnobservedBasalLayer(layers)) r_height <- r_height[r_height >= layers$height[1]]
+
   ## --- create a map between original and resampled layers ----
   ## using "approx" to retrieve map; this map consequently allows to map non-numeric vectors such as grain type
   ## using "approx" in a left-continous sense, i.e. top interface is targeted
   ## (-> this is done by "f", fully left-continuous at f=1)
   tmp_height <- approx(x = layers$height, y = layers$height, xout = r_height, method = "constant",
                        rule = 2, f = 1)[[2]]
-  map <- vapply(X = tmp_height, FUN = function(x) which(x == layers$height), FUN.VALUE = 1)
-  r <- data.frame(height = r_height,
-                  gtype = layers$gtype[map],
-                  hardness = layers$hardness[map])
-  if ("ddate" %in% names(layers)) r$ddate <- layers$ddate[map]
+  map <- tryCatch({
+    vapply(X = tmp_height, FUN = function(x) which(x == layers$height), FUN.VALUE = 1)
+  }, error = function(err) {
+    stop("Error, likely caused by malformatted profile! -> validate_snowprofile!")
+  })
+
+  r <- droplevels(layers[map, !names(layers) %in% c("height", "thickness", "depth")])
+  r$height <- r_height
 
   ## --- create new snowprofile object ----
   if (is.snowprofile(x)) {
     xout <- x[names(x) != "layers"]
-    xout$layers <- snowprofileLayers(layerFrame = r)
+    xout$layers <- snowprofileLayers(layerFrame = r, dropNAs = FALSE, validate = FALSE)
+    xout$hs <- max( c(suppressWarnings(max(xout$layers$height)), xout$hs), na.rm = FALSE )
 
     if ("changes" %in% names(xout)) xout$changes <- paste(xout$changes, " -> resampled")
     else xout$changes  <- "resampled"
     class(xout) <- class(x)
   } else {
-    xout <- snowprofileLayers(layerFrame = r)
+    xout <- snowprofileLayers(layerFrame = r, validate = FALSE)
   }
 
   return(xout)

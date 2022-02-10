@@ -1,3 +1,21 @@
+
+
+# sarp.snowprofile.alignment 1.1.4
+
+  - Implemented functionality to align profiles *without* the requirement to re-scale them first! see examples in `?dtwSP`
+  - `simSP` 
+      - includes several different approaches of computing snow profile similarities
+      - can handle variable similarity values for non-matched layers
+      - can apply penalty based on thickness of non-matched layers
+  - Implementation of *Dynamic Time Warping Barycenter Averaging* (`dbaSP`) enables to 
+      - average snow profiles. see also `averageSP` and `averageSPalongSeason`
+      - connect layers within a profile set (`backtrackLayers`) to conveniently compute summary statistics and distributions of layers
+  
+  - Minor scale changes:
+      - Implemented ability to configure the absolute warping window (instead of relative one only)
+      - Included first systematic tests (of various different alignment scenarios)
+      - Fix bug in `warpSP`, which was introduced due to changes in the `sarp.snowprofile::snowprofile` data class (i.e., introduction of `unobservedBasalLayer`s)
+
 # sarp.snowprofile.alignment 1.0.0
 
   - Updated license (GPL >= 3)

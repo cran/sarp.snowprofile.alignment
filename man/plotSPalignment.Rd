@@ -8,7 +8,6 @@ plotSPalignment(
   query,
   ref,
   dtwAlignment = NULL,
-  open.end = TRUE,
   keep.alignment = FALSE,
   plot.costDensity = FALSE,
   plot.warpedQuery = TRUE,
@@ -25,6 +24,8 @@ plotSPalignment(
   mainQwarped = "warped query",
   emphasizeLayers_qu = FALSE,
   emphasizeLayers_ref = FALSE,
+  failureLayers_qu = FALSE,
+  failureLayers_qu_col = "red",
   ...
 )
 }
@@ -34,8 +35,6 @@ plotSPalignment(
 \item{ref}{The reference snowprofile to be warped against}
 
 \item{dtwAlignment}{\code{dtwSP} object (optional)}
-
-\item{open.end}{Is an open end alignment desired? boolean}
 
 \item{keep.alignment}{Return \code{dtwSP} object with resampled query, ref and warped query? boolean}
 
@@ -70,6 +69,10 @@ default FALSE i.e. one segment line per (synthetic) layer interface -> supports 
 \item{emphasizeLayers_qu}{emphasize Layers in query, see \link{plot.snowprofile}}
 
 \item{emphasizeLayers_ref}{emphasize Layers in reference, see \link{plot.snowprofile}}
+
+\item{failureLayers_qu}{draw arrow to failure layers (see \link{plot.snowprofile})? provide height vector.}
+
+\item{failureLayers_qu_col}{color of arrow(s) (individual color string or vector, see \link{plot.snowprofile})}
 
 \item{...}{Arguments passed to \code{\link{distMatSP}} and \code{\link{dtwSP}}}
 }

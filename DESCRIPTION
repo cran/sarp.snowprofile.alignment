@@ -1,7 +1,7 @@
 Package: sarp.snowprofile.alignment
 Title: Snow Profile Alignment, Aggregation, and Clustering
-Version: 1.0.2
-Date: 2020-11-30
+Version: 1.1.4
+Date: 2022-02-10
 Authors@R: 
     c(
     person(given = "Florian", family = "Herla", role = c("aut", "cre"), email = "fherla@sfu.ca"),
@@ -19,24 +19,29 @@ Description: Snow profiles describe the vertical (1D) stratigraphy of layered
     geared towards avalanche hazard assessment. Finally, through exploiting data
     aggregation and clustering methods, the similarity measure provides the
     foundation for grouping and summarizing snow profiles according to similar
-    hazard conditions. For more background information refer to Herla, Horton,
-    and Haegeli (accepted) <doi:10.5194/gmd-2020-171>.
+    hazard conditions. In particular, this package allows for averaging large
+    numbers of snow profiles with DTW Barycenter Averaging and thereby 
+    facilitates the computation of individual layer distributions and summary 
+    statistics that are relevant for avalanche forecasting purposes. 
+    For more background information refer to Herla, Horton, Mair,
+    and Haegeli (2021) <doi:10.5194/gmd-14-239-2021>, and Herla, Mair, and Haegeli 
+    (2022, in review) <doi:10.5194/tc-2022-29>.
 URL: http://www.avalancheresearch.ca/
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Language: en-US
-Imports: dtw, grid, shiny
-Depends: R (>= 2.10), sarp.snowprofile
-Suggests: knitr, rmarkdown, dendextend, smacof
+Imports: dtw, grid, shiny, data.table
+Depends: R (>= 2.10), sarp.snowprofile (>= 1.2.0)
+Suggests: knitr, rmarkdown, dendextend, smacof, testthat, progress
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2020-11-30 13:37:36 UTC; flo
+Packaged: 2022-02-10 12:46:25 UTC; flo
 Author: Florian Herla [aut, cre],
   Pascal Haegeli [aut],
   Simon Horton [aut],
   SFU Avalanche Research Program [fnd]
 Maintainer: Florian Herla <fherla@sfu.ca>
 Repository: CRAN
-Date/Publication: 2020-12-03 08:30:03 UTC
+Date/Publication: 2022-02-10 13:40:02 UTC

@@ -18,10 +18,13 @@
 #' e.g. defaults to [layerWeightingMat]; the higher the values for a given grain type pair, the more the algorithm will try to
 #' match those layers above others. To turn weighting scheme off, set `prefLayerWeights = NA`
 #' @param ddateNorm Normalize the deposition date distance by `ddateNorm` number of days. Numeric, default 5.
-#' @param windowFunction a window function analogous to [warpWindowSP] (*Note!* designed for a quadratic distance matrix,
-#' i.e. two profiles with identical numbers of layers. To resample the profiles see [resampleSPpairs] and examples below.
-#' Other compatible window functions can be found in [dtw::dtwWindowingFunctions].)
-#' @param ... arguments to the window function, e.g. `window.size`, `ddate.window.size`, ...
+#' @param windowFunction a window function analogous to [warpWindowSP] (Other compatible window functions can be
+#' found in [dtw::dtwWindowingFunctions].)
+#' @param top.down.mirroring Will the resulting distance matrix be used for top down alignments? i.e., do you want to mirror the
+#' matrix about its anti-diagonal (top-left/bottom-right diagonal)?
+#' @param warn.if.na.in.distance.calc most dependent functions in this package should be able to deal with NA values encountered in distance
+#' calculations. Set this argument to `TRUE` if you want to be warned anyways.
+#' @param ... arguments to the window function, e.g. `window.size`, `window.size.abs`, `ddate.window.size`, ...
 #'
 #' @return A distance matrix of dimension (n x m), where n, m are the number of layers in the query and ref, respectively.
 #'
@@ -44,23 +47,24 @@
 #' dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA,
 #'                   dims = "gtype", weights = 1, prefLayerWeights = NA)
 #' graphics::image(dMat,
-#'                 main = "... only based grain type, and without preferential layer matching")
+#'                 main = "Only based on grain type, and without preferential layer matching")
+#'
+#' ## enable preferential layer matching:
+#' dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA)
+#' graphics::image(dMat,
+#'                 main = "... with preferential layer matching")
 #'
 #'
-#' ## to use a warping window, the profiles need to have equal numbers of layers:
-#' ## i.e., resample them first, then compute dMat with a warping window
-#' plist <- resampleSPpairs(SPpairs$A_modeled, SPpairs$A_manual)
-#' dMat <- distMatSP(plist$query, plist$ref)
-#' graphics::image(dMat, main = "Default with warping window")
+#' ## using a warping window:
+#' dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, window.size.abs = 50)
+#' graphics::image(dMat, main = "... and superimposing an absolute warping window of 50 cm")
 #'
 #' @export
-
-## TODO: apply window function before calculating the distances of all elements to save a few resources
-
 distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2, 0.8),
                                  gtype_distMat = sim2dist(grainSimilarity_align(FALSE)),
                                  prefLayerWeights = layerWeightingMat(FALSE),
-                                 ddateNorm = 5, windowFunction = warpWindowSP, ...) {
+                                 ddateNorm = 5, windowFunction = warpWindowSP,
+                                 top.down.mirroring = FALSE, warn.if.na.in.distance.calc = FALSE, ...) {
 
   ## --- Assertions and Initializations ----
   if (!is.snowprofile(query) | !is.snowprofile(ref)) stop("Both query and ref need to be snowprofile objects!")
@@ -68,10 +72,7 @@ distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2
   nRef <- nrow(ref$layers)
   if (!length(dims) == length(weights)) stop("Weights and dims need to have equal length!")
   if (!all(dims %in% names(ref$layers)) & !all(dims %in% names(query$layers))) stop("Not all dimensions you specified are available in both profiles.")
-
-  ## handle to pass to subfunctions for error handling:
-  handle <- paste("Query @", query$station, query$datetimeUTC, "&",
-                  "Ref @", ref$station, ref$datetimeUTC)
+  if (nQue == 0 | nRef == 0) stop("One profile contains no layers, can't continue.")
 
   ## initialize layer weighting matrix for preferential alignment
   lwmat <- array(0, c(nQue, nRef))
@@ -95,7 +96,7 @@ distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2
                        normalize = TRUE,
                        absDist = TRUE)
 
-    if (any(is.na(distArr[,,tofill]))) stop("NAs encountered in hardness distance")
+    # if (any(is.na(distArr[,,tofill]))) stop("NAs encountered in hardness distance")
     tofill <- tofill + 1
   }
   if ("gtype" %in% dims) {
@@ -104,8 +105,7 @@ distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2
       weights[which(dims == "gtype")] *
       extractFromScoringMatrix(ScoringFrame = gtype_distMat,
                                grainType1 = as.character(query$layers$gtype)[iMat[,1]],
-                               grainType2 = as.character(ref$layers$gtype)[iMat[,2]],
-                               profile_handle = handle)
+                               grainType2 = as.character(ref$layers$gtype)[iMat[,2]])
     tofill <- tofill + 1
 
     ## fill layer weighting matrix
@@ -127,23 +127,26 @@ distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2
   }
 
   ## --- Reduce multi-dim array to final distance matrix ----
-  ## Sum over array dimensions and multiply by layer weighting scheme to get one (nQue x nRef) distance matrix:
-  if (any(is.na(distArr))) warning("Ignoring encountered NAs in distance calculation!")
+  ## Sum over array dimensions and add layer weighting scheme to get one (nQue x nRef) distance matrix:
+  if (warn.if.na.in.distance.calc)
+    if (any(is.na(distArr))) warning("Ignoring encountered NAs in distance calculation!")
   maxLW <- suppressWarnings(max(c(max(prefLayerWeights, na.rm = TRUE), 1)))
   distMat <- rowSums(distArr, dims = 2, na.rm = TRUE) + lwmat
+
+  ## Mirror matrix about its anti-diagonal (top-left/bottom-right diagonal) for top.down alignments:
+  if (top.down.mirroring) distMat <- apply(apply(distMat, 1, rev), 1, rev)
 
   ## Apply window function to distMat:
   ## windowFunction needs to return TRUE for the warping window, FALSE else
   ## therefore, set all FALSE returns of the window function to NA in the distMat:
   if (is.function(windowFunction)) {
-    if (nQue != nRef) stop("Warping window is only implemented for profiles with identical numbers of layers, resample them first! ..see ?distMatSP")
-    profile.size <- nrow(ref$layers)
-    profile.height <- ref$layers$height[profile.size]
-    iheight <- matrix(query$layers$height, byrow = FALSE, nrow = profile.size, ncol = profile.size)
-    jheight <- matrix(ref$layers$height, byrow = TRUE, nrow = profile.size, ncol = profile.size)
+    profile.size <- max(nrow(ref$layers), nrow(query$layers))
+    profile.height <- max(ref$hs, query$hs)
+    iheight <- matrix(query$layers$height, byrow = FALSE, nrow = nQue, ncol = nRef)
+    jheight <- matrix(ref$layers$height, byrow = TRUE, nrow = nQue, ncol = nRef)
     if ("ddate" %in% names(query$layers) & "ddate" %in% names(ref$layers)) {
-      iddate <- matrix(query$layers$ddate, byrow = FALSE, nrow = profile.size, ncol = profile.size)
-      jddate <- matrix(ref$layers$ddate, byrow = TRUE, nrow = profile.size, ncol = profile.size)
+      iddate <- matrix(query$layers$ddate, byrow = FALSE, nrow = nQue, ncol = nRef)
+      jddate <- matrix(ref$layers$ddate, byrow = TRUE, nrow = nQue, ncol = nRef)
     } else {
       iddate <- NA
       jddate <- NA
@@ -155,7 +158,7 @@ distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2
   }
 
   ## final assertion (during code writing, can be eliminated if stable)
-  if (!all(dim(distMat) == c(nrow(query$layers), nrow(ref$layers)))) stop("Calculated distance matrix seems to have wrong dimensions")
+  # if (!all(dim(distMat) == c(nrow(query$layers), nrow(ref$layers)))) stop("Calculated distance matrix seems to have wrong dimensions")
 
   return(distMat)
 }

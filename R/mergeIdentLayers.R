@@ -49,14 +49,14 @@ mergeIdentLayers <- function(x, properties = c("hardness", "gtype")) {
   np <- length(properties)
   nl <- nrow(layers)
   if (nl == 1) {
-    warning(paste0("mergeIdentLayers: Only one layer, nothing to merge."))
+    # warning(paste0("mergeIdentLayers: Only one layer, nothing to merge."))
     return(x)
   }
   diffAr <- matrix(nrow = nl-1, ncol = np)
   for (i in seq(np)) {
     diffAr[, i] <- diff(layers[properties[i]][, 1])  # nl-1 x np array; zeros correspond to layers with constant properties
   }
-  rowStd <- apply(diffAr, MARGIN = 1, sd, na.rm = TRUE)
+  rowStd <- apply(diffAr, MARGIN = 1, sd_sample_uncorrected, na.rm = TRUE)
   redundants <- which(rowSums(diffAr) == 0 & rowStd == 0)  # reduce dimensions to one; zeros correspond to layers where all properties are constant
   layerSeq <- seq(nl)
   keepIndices <- layerSeq[!(layerSeq %in% redundants)]  # extract indices of non-redundant 'parent' layers
@@ -66,7 +66,7 @@ mergeIdentLayers <- function(x, properties = c("hardness", "gtype")) {
   layerFrameDims <- unique(c(c("height", "hardness", "gtype"), properties))
   layerFrame <- data.frame(lapply(layerFrameDims, function(x, layers) layers[x][keepIndices, 1], layers = layers))
   colnames(layerFrame) <- layerFrameDims
-  newLayers <- snowprofileLayers(layerFrame = layerFrame)
+  newLayers <- snowprofileLayers(layerFrame = layerFrame, dropNAs = FALSE, validate = FALSE)
 
   ## if x is a snowprofile object --> write information to "changes"
   ## and update x$layers with layers

@@ -59,10 +59,15 @@ warpSP <- function(alignment, whom = NA) {
     ## warping approach analogously to example(dtw) using dtw-object index vectors:
     qmod <- q[names(q) != "layers"]
     qmodHeight <- r$layers$height[alignment$index2]
+    qmod$hs <- max(qmodHeight)
+    qmod$maxObservedDepth <- r$layers$depth[alignment$index2][1] + r$layers$thickness[alignment$index2][1]
     qmod$layers <- snowprofileLayers(gtype = q$layers$gtype[alignment$index1],
                                      hardness = q$layers$hardness[alignment$index1],
+                                     queryLayerIndex = alignment$index1,
                                      height = qmodHeight,
-                                     formatTarget = "thickness")
+                                     maxObservedDepth = qmod$maxObservedDepth,
+                                     hs = qmod$hs,
+                                     validate = FALSE)
     class(qmod) <- class(q)
     qmod <- rmZeroThicknessLayers(qmod)
     alignment$queryWarped <- qmod
@@ -72,15 +77,20 @@ warpSP <- function(alignment, whom = NA) {
     ## i.e. warp query, but stack non-matched layers on top
     qmod <- q[names(q) != "layers"]
     qmodHeight <- q$layers$height[alignment$index2]
+    qmodStackedHeightFINAL <- c(qmodHeight,
+                                qmodHeight[length(qmodHeight)] - q$layers$height[alignment$imin] + q$layers$height[-(1:alignment$imin-1)])
+    qmod$maxObservedDepth <- min(r$maxObservedDepth + max(qmodStackedHeightFINAL) - max(qmodHeight), max(qmodStackedHeightFINAL), na.rm = TRUE)
     qmod$layers <- snowprofileLayers(gtype = as.factor(c(as.character(q$layers$gtype[alignment$index1]),
                                                     as.character(q$layers$gtype[-(1:alignment$imin-1)]))),
                                      hardness = c(q$layers$hardness[alignment$index1],
                                                   q$layers$hardness[-(1:alignment$imin-1) ]),
-                                     height = c(qmodHeight,
-                                                qmodHeight[length(qmodHeight)] - q$layers$height[alignment$imin] + q$layers$height[-(1:alignment$imin-1)]),
-                                     formatTarget = "thickness")
+                                     queryLayerIndex = c(alignment$index1, seq(nrow(q$layers))[-(1:alignment$imin-1)]),
+                                     height = qmodStackedHeightFINAL,
+                                     maxObservedDepth = qmod$maxObservedDepth,
+                                     validate = FALSE)
     class(qmod) <- class(q)
     qmod <- rmZeroThicknessLayers(qmod)
+    qmod$hs <- max(qmod$layers$height)  # in this case, it is easier to retrieve hs after creating the layers..
     alignment$queryWarped <- qmod
 
     ## :::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -90,10 +100,16 @@ warpSP <- function(alignment, whom = NA) {
     ## need to reverse vectors in top down:
     qmod <- q[names(q) != "layers"]
     qmodHeight <- rev(r$layers$height[alignment$index2])
+    qmod$hs <- max(qmodHeight)
+    if (hasUnobservedBasalLayer(r)) qmod$maxObservedDepth <- rev(r$layers$depth[alignment$index2])[2] + rev(r$layers$thickness[alignment$index2])[2]
+    else qmod$maxObservedDepth <- rev(r$layers$depth[alignment$index2])[1] + rev(r$layers$thickness[alignment$index2])[1]
     qmod$layers <- snowprofileLayers(gtype = rev(q$layers$gtype[alignment$index1]),
                                      hardness = rev(q$layers$hardness[alignment$index1]),
+                                     queryLayerIndex = rev(alignment$index1),
                                      height = qmodHeight,
-                                     formatTarget = "thickness")
+                                     maxObservedDepth = qmod$maxObservedDepth,
+                                     hs = qmod$hs,
+                                     validate = FALSE)
     class(qmod) <- class(q)
     qmod <- rmZeroThicknessLayers(qmod)
 
@@ -104,10 +120,16 @@ warpSP <- function(alignment, whom = NA) {
     ## need to reverse vectors and undo stacking:
     qmod <- q[names(q) != "layers"]
     qmodHeight <- rev(q$layers$height[alignment$index2])
-    qmod$layers <- snowprofileLayers(gtype = as.factor(rev(as.character(q$layers$gtype[alignment$index1]))),
+    qmod$hs <- max(qmodHeight)
+    if (hasUnobservedBasalLayer(q)) qmod$maxObservedDepth <- rev(q$layers$depth[alignment$index2])[2] + rev(q$layers$thickness[alignment$index2])[2]
+    else qmod$maxObservedDepth <- rev(q$layers$depth[alignment$index2])[1] + rev(q$layers$thickness[alignment$index2])[1]
+    qmod$layers <- snowprofileLayers(gtype = rev(q$layers$gtype[alignment$index1]),
                                      hardness = rev(q$layers$hardness[alignment$index1]),
+                                     queryLayerIndex = rev(alignment$index1),
                                      height = qmodHeight,
-                                     formatTarget = "thickness")
+                                     maxObservedDepth = qmod$maxObservedDepth,
+                                     hs = qmod$hs,
+                                     validate = FALSE)
     class(qmod) <- class(q)
     qmod <- rmZeroThicknessLayers(qmod)
 
@@ -119,10 +141,15 @@ warpSP <- function(alignment, whom = NA) {
     ## analogous to "query" (but with indices swapped):
     rmod <- r[names(r) != "layers"]
     rmodHeight <- q$layers$height[alignment$index1]
+    rmod$hs <- max(rmodHeight)
+    rmod$maxObservedDepth <- q$layers$depth[alignment$index1][1] + q$layers$thickness[alignment$index1][1]
     rmod$layers <- snowprofileLayers(gtype = r$layers$gtype[alignment$index2],
                                      hardness = r$layers$hardness[alignment$index2],
+                                     refLayerIndex = alignment$index2,
                                      height = rmodHeight,
-                                     formatTarget = "thickness")
+                                     maxObservedDepth = rmod$maxObservedDepth,
+                                     hs = rmod$hs,
+                                     validate = FALSE)
     class(rmod) <- class(r)
     rmod <- rmZeroThicknessLayers(rmod)
 
@@ -136,9 +163,20 @@ warpSP <- function(alignment, whom = NA) {
   ## --- RETURN ----
   if (!inherits(alignment, "dtwSP")) class(alignment) <- append("dtwSP", class(alignment))
 
-  ## clean up data.frame rownames:
-  if ("queryWarped" %in% names(alignment)) rownames(alignment$queryWarped$layers) <- seq(nrow(alignment$queryWarped$layers))
-  else if ("referenceWarped" %in% names(alignment)) rownames(alignment$referenceWarped$layers) <- seq(nrow(alignment$referenceWarped$layers))
+  ## clean up data.frame rownames and append other layer properties to warped profile
+  if ("queryWarped" %in% names(alignment)) {
+    rownames(alignment$queryWarped$layers) <- seq(nrow(alignment$queryWarped$layers))
+    if ("ddate" %in% names(alignment$query$layers)) alignment$queryWarped$layers$ddate <- alignment$query$layers$ddate[alignment$queryWarped$layers$queryLayerIndex]
+    if ("gsize" %in% names(alignment$query$layers)) alignment$queryWarped$layers$gsize <- alignment$query$layers$gsize[alignment$queryWarped$layers$queryLayerIndex]
+    if ("density" %in% names(alignment$query$layers)) alignment$queryWarped$layers$density <- alignment$query$layers$density[alignment$queryWarped$layers$queryLayerIndex]
+    if ("tsa" %in% names(alignment$query$layers)) alignment$queryWarped$layers$tsa <- alignment$query$layers$tsa[alignment$queryWarped$layers$queryLayerIndex]
+    if ("tsa_interface" %in% names(alignment$query$layers)) alignment$queryWarped$layers$tsa_interface <- alignment$query$layers$tsa_interface[alignment$queryWarped$layers$queryLayerIndex]
+    if ("rta" %in% names(alignment$query$layers)) alignment$queryWarped$layers$rta <- alignment$query$layers$rta[alignment$queryWarped$layers$queryLayerIndex]
+    if ("rta_interface" %in% names(alignment$query$layers)) alignment$queryWarped$layers$rta_interface <- alignment$query$layers$rta_interface[alignment$queryWarped$layers$queryLayerIndex]
+    if ("layerOfInterest" %in% names(alignment$query$layers)) alignment$queryWarped$layers$layerOfInterest <- alignment$query$layers$layerOfInterest[alignment$queryWarped$layers$queryLayerIndex]
+  } else if ("referenceWarped" %in% names(alignment)) {
+    rownames(alignment$referenceWarped$layers) <- seq(nrow(alignment$referenceWarped$layers))
+  }
 
   return(alignment)
 }

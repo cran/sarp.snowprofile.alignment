@@ -12,7 +12,6 @@
 #' @param query The query snowprofile to be warped
 #' @param ref The reference snowprofile to be warped against
 #' @param dtwAlignment `dtwSP` object (optional)
-#' @param open.end Is an open end alignment desired? boolean
 #' @param keep.alignment Return `dtwSP` object with resampled query, ref and warped query? boolean
 #' @param segCol Color of alignment segments. Passed to [gpar], default = "gray70"
 #' @param segLty Linestyle of alignment segments. Passed to [gpar], default = "dotted"
@@ -31,6 +30,8 @@
 #' @param mainQwarped subtitle for warped query subfigure
 #' @param emphasizeLayers_qu emphasize Layers in query, see [plot.snowprofile]
 #' @param emphasizeLayers_ref emphasize Layers in reference, see [plot.snowprofile]
+#' @param failureLayers_qu draw arrow to failure layers (see [plot.snowprofile])? provide height vector.
+#' @param failureLayers_qu_col color of arrow(s) (individual color string or vector, see [plot.snowprofile])
 #' @param ... Arguments passed to \code{\link{distMatSP}} and \code{\link{dtwSP}}
 #'
 #' @return dtw object with the resampled '$query' and '$reference', as well as the warped query '$queryWarped'
@@ -58,13 +59,15 @@
 #'
 #'
 #' @export
-plotSPalignment <- function(query, ref, dtwAlignment = NULL, open.end = TRUE, keep.alignment = FALSE,
-                                       plot.costDensity = FALSE, plot.warpedQuery = TRUE, label.ddate = FALSE,
-                                       segCol = "gray70", segLty = "dotted", segLwd = 1, segTidy = FALSE,
-                                       segInd = TRUE, segEmph = NA,
-                                       cex = 1,
-                                       mainQu = "query", mainRef = "reference", mainQwarped = "warped query",
-                                       emphasizeLayers_qu = FALSE, emphasizeLayers_ref = FALSE, ...) {
+plotSPalignment <- function(query, ref, dtwAlignment = NULL, keep.alignment = FALSE,
+                            plot.costDensity = FALSE, plot.warpedQuery = TRUE, label.ddate = FALSE,
+                            segCol = "gray70", segLty = "dotted", segLwd = 1, segTidy = FALSE,
+                            segInd = TRUE, segEmph = NA,
+                            cex = 1,
+                            mainQu = "query", mainRef = "reference", mainQwarped = "warped query",
+                            emphasizeLayers_qu = FALSE, emphasizeLayers_ref = FALSE,
+                            failureLayers_qu = FALSE, failureLayers_qu_col = "red",
+                            ...) {
 
   ## --- subfunction, assertion, initialization ----
   ## local subfunction to draw line segments
@@ -81,17 +84,8 @@ plotSPalignment <- function(query, ref, dtwAlignment = NULL, open.end = TRUE, ke
 
     if (!is.snowprofile(query) | !is.snowprofile(ref)) stop("query and ref need to be two snowprofile objects.")
 
-    ## merge layers before calculating dtw alignment, if subsequent layers have identical properties in their warping dimensions
-    dots <- list(...)
-    if ("dims" %in% names(dots)) {
-      query <- mergeIdentLayers(query, properties = dots$dims)
-      ref <- mergeIdentLayers(ref, properties = dots$dims)
-    } else {
-      query <- mergeIdentLayers(query)
-      ref <- mergeIdentLayers(ref)
-    }
     ## calculate dtw object with call to dtwSP (resampling is done there!)
-    dtwAlignment <- dtwSP(query, ref, open.end = open.end, keep.internals = TRUE, ...)
+    dtwAlignment <- dtwSP(query, ref, keep.internals = TRUE, ...)
   }
 
 
@@ -140,7 +134,9 @@ plotSPalignment <- function(query, ref, dtwAlignment = NULL, open.end = TRUE, ke
   else par(mfrow = c(1, 2))
   # 1st subplot
   par(cex = cex)
-  plot(dtwAlignment$query, main = mainQu, ylim = c(0, ymx), emphasizeLayers = emphasizeLayers_qu, ylab = "Snow height (cm)")  # ; vps3 <- do.call(vpStack, baseViewports())
+  plot(dtwAlignment$query, main = mainQu, ymax = ymx, emphasizeLayers = emphasizeLayers_qu,
+       failureLayers = failureLayers_qu, failureLayers.cex = 6, failureLayers.col = failureLayers_qu_col,
+       ylab = "Snow height (cm)")  # ; vps3 <- do.call(vpStack, baseViewports())
   if (label.ddate) {
     xText <- matrix(0.7, nrow = nrow(dtwAlignment$query$layers), ncol = 1)
     yText <-  dtwAlignment$query$layers$height - 0.5 * diff(c(0, dtwAlignment$query$layers$height))
@@ -151,7 +147,7 @@ plotSPalignment <- function(query, ref, dtwAlignment = NULL, open.end = TRUE, ke
   Xq <- sapply(xq, function(x) grconvertX(x, "user", "ndc"))
   Yq <- sapply(yq, function(x) grconvertY(x, "user", "ndc"))
   # 2nd subplot
-  plot(dtwAlignment$reference, main = mainRef, ylim = c(0, ymx), emphasizeLayers = emphasizeLayers_ref, xlab = "Hardness")  # ; vps1 <- do.call(vpStack, baseViewports())
+  plot(dtwAlignment$reference, main = mainRef, ymax = ymx, emphasizeLayers = emphasizeLayers_ref, xlab = "Hardness")  # ; vps1 <- do.call(vpStack, baseViewports())
   if (label.ddate) {
     xText <- matrix(0.7, nrow = nrow(dtwAlignment$reference$layers), ncol = 1)
     yText <-  dtwAlignment$reference$layers$height - 0.5 * diff(c(0, dtwAlignment$reference$layers$height))
@@ -163,11 +159,8 @@ plotSPalignment <- function(query, ref, dtwAlignment = NULL, open.end = TRUE, ke
   Yr <- sapply(yr, function(x) grconvertY(x, "user", "ndc"))
   # 3rd subplot
   if (plot.warpedQuery) {
-    plot(qmod, main = mainQwarped, ylim = c(0, ymx))  # ; vps2 <- do.call(vpStack, baseViewports())
-    ## hack plot for top-down alignments: overplot non-matched layers with white area
-    mutePro <- snowprofile(layers = snowprofileLayers(layerFrame = qmod$layers[1, ]))
-    mutePro$layers$thickness <- mutePro$layers$thickness - median(qmod$layers$thickness)
-    plot(mutePro, add = TRUE, Col = "white")
+    plot(qmod, main = mainQwarped, ymax = ymx,
+         highlightUnobservedBasalLayers = FALSE)  # ; vps2 <- do.call(vpStack, baseViewports())
   }
 
   ## plot line segments:

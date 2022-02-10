@@ -11,6 +11,7 @@ medoidSP(
   distmat = NULL,
   verbose = FALSE,
   resamplingRate = 0.5,
+  progressbar = require("progress", quietly = TRUE, character.only = TRUE),
   ...
 )
 }
@@ -27,7 +28,9 @@ medoidSP(
 
 \item{resamplingRate}{The resampling rate that is used for the whole set if \code{rescale_resample = TRUE}}
 
-\item{...}{arguments passed to \link{distanceSP}}
+\item{progressbar}{Do you want to print a progress bar with recommended package "progress"?}
+
+\item{...}{arguments passed to \link{distanceSP} and then further to \link{dtwSP}}
 }
 \value{
 If \code{retDistmat = FALSE} return the (named) index of the medoid snow profile, otherwise return a list with the elements
@@ -43,13 +46,18 @@ and the aligned pair is evaluated by \link{simSP}.
 Note that the number of possible profile pairs grows exponentially with the number of profiles in the group (i.e.,
 O(n^2) calls, where n is the number of profiles in the group).
 }
+\details{
+Note that the pairwise distance matrix is modified within the function call to represent a symmetric distance matrix.
+That is,, however, not originally the case, since \code{dtwSP(A, B) != dtwSP(B, A)}. The matrix is therefore made symmetric by
+setting the similarity between the profiles A and B to \verb{max(\{dtwSP(A, B), dtwSP(B, A)\})}.
+}
 \examples{
 this_example_runs_about_5s <- TRUE
 if (!this_example_runs_about_5s) {  # exclude from cran checks
 
   ## take a list of profiles
   grouplist <- SPgroup[1:4]
-  plot(grouplist, SortMethod = 'unsorted', labelOriginalIndices = TRUE)
+  plot(grouplist, SortMethod = 'unsorted', xticklabels = "originalIndices")
 
   ## calulate medoid profile
   idxMedoid <- medoidSP(grouplist)

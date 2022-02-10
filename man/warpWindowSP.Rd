@@ -14,6 +14,7 @@ warpWindowSP(
   profile.size,
   profile.height,
   window.size = 0.3,
+  window.size.abs = NA,
   ddate.window.size = Inf,
   ...
 )
@@ -27,16 +28,18 @@ warpWindowSP(
 
 \item{jheight}{matrix of ref height filled into the rows of the matrix}
 
-\item{iddate}{same as iheight, but containing deposition date information}
+\item{iddate}{same as iheight, but containing deposition date information (i.e., POSIXct data converted to numeric through matrix call!)}
 
-\item{jddate}{same as jheight, but containing deposition date information}
+\item{jddate}{same as jheight, but containing deposition date information (i.e., POSIXct data converted to numeric through matrix call!)}
 
-\item{profile.size}{number of layers in each of the profiles (scalar)}
+\item{profile.size}{number of layers in the longer one of the two profiles (scalar)}
 
-\item{profile.height}{snow height of the profiles (scalar)}
+\item{profile.height}{snow height of the deeper one of the two profiles (scalar)}
 
 \item{window.size}{percentage of profile.size or profile.height defining the size of the warping window
 (i.e., the most restrictive of the two will be applied)}
+
+\item{window.size.abs}{Instead of a \code{window.size} percentage, an absolute value (in \emph{cm}!) can be provided}
 
 \item{ddate.window.size}{number of days that exclude layers from the warping window if their deposition dates
 differ by more than these days}
@@ -44,14 +47,9 @@ differ by more than these days}
 \item{...}{unused---but important to be able to provide other warping functions to \link{distMatSP}}
 }
 \description{
-Given a \emph{quadratic} matrix, this function sets all elements of the matrix that are outside the so-called warping
+Given a matrix, this function sets all elements of the matrix that are outside the so-called warping
 window to \code{NA}. The warping window is a slanted band of constant width around the main diagonal
 (i.e., \emph{Sakoe-Chiba}-band), and it's size can be controlled with function arguments.
-}
-\details{
-\strong{Note} that the function is designed for cost matrices derived from pairs of snow profiles that have equal numbers
-of layers (cf., \link{resampleSPpairs}). The function takes many matrix-like inputs, all of which need to be of the size
-\verb{(profile.size x profile.size)}, i.e., square matrices of the size 'number of layers'.
 }
 \seealso{
 \link[dtw:dtwWindowingFunctions]{dtw::dtwWindowingFunctions}

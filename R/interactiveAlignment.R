@@ -54,7 +54,7 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
                                 });
                             '))
               ),
-    headerPanel("DTW snow profile alignment"),
+    headerPanel("DTW snow profile alignment app"),
     fluidRow(
       column(4, offset = 0,
              ## Source - Select whether to browse
@@ -65,23 +65,20 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
                                                        "Browse for your own PRF file"),
                                            selected = "1) Variable local warping"),
                               ## Action button
-                              actionButton("do", "Load", style = "background-color: silver;  color:navy"),
+                              actionButton("do", "Load Profiles", style = "background-color: silver;  color:navy"),
                               br(),
                               hr()
                              ),
+             h4("Profile Settings"),
              ## Reverse checkbox
              checkboxInput("reverse", "Switch query and reference", value = FALSE),
              ## Scale profiles to equal heights before alignment
-             checkboxInput("initialScaling", "Scale profiles to equal height before aligning", value = TRUE),
+             checkboxInput("initialScaling", "Scale profiles to equal height before aligning", value = FALSE),
              ## resampling rate:
              checkboxInput("resampling", "Resample profiles onto regular grid", value = TRUE),
              conditionalPanel(condition = "input.resampling",
                               sliderInput("resamplingRate", "sampling rate (cm)", min = 0.25, max = 5, value = 0.5, step = 0.25)),
-             ## use weighted grain Similarity matrix:
-             checkboxInput("layerWeighting", "Apply a layer weighting scheme to the grain similarity matrix for preferential alignment; unweighted matrix is still used for similarity measure Phi", value = TRUE)
-             ),
-
-
+      ),
       column(8,
              ## Browse CAAML or PRF files:
              conditionalPanel(condition = "(!output.onInput && input.source == 'Browse for your own CAAML files')",
@@ -106,12 +103,15 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
       #           tags$style(type="text/css", ".well { min-width: 300px; max-width: 300px;}")
       #           ),
       width = 3,
+      h4("Alignment Settings"),
       checkboxInput("openEnd", "Open End alignment", value = TRUE),
       conditionalPanel(condition = "input.openEnd",
                        checkboxInput("checkGlobal", "Check global alignment", value = TRUE)),
       radioButtons("alignDir", "Direction of alignment",
                    choices = list("Bottom-up (BU)", "Top-down (TD)", "BU/TD"),
                    selected = "BU/TD"),
+      ## use weighted grain Similarity matrix:
+      checkboxInput("layerWeighting", "Apply a layer weighting scheme to the grain similarity matrix for preferential layer matching", value = TRUE),
       checkboxInput("ddate", "Add deposition date info", value = FALSE),
       conditionalPanel(condition = "input.ddate",
                        sliderInput("ddateNorm",
@@ -141,6 +141,7 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
                             # ),
                     min = 0, max = 1, value = 0.7)
       ),
+      br(),
       ## Set warping window
       h4("Warping window"),
       sliderInput(inputId = "wsize", "percentage of layers/height",
@@ -149,12 +150,20 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
       #                  sliderInput(inputId = "dwsize", "number of days",
       #                              min = 5, max = 40, value = 40)),
 
+      br(),
       ## Step pattern
       h4("Local slope constraint"),
       helpText("symmetricP1 limits layer stretching and compressing to double/half the original thickness"),
-      radioButtons(inputId = "stepPattern_m", label = "",
+      radioButtons(inputId = "stepPattern_m", label = NULL,
                   choices = list("unconstrained", "symmetricP1", "symmetricP2"), selected = "symmetricP1",
-                  inline = FALSE)
+                  inline = FALSE),
+
+      br(),
+      ## Similarity type
+      h4("Similarity assessment method"),
+      radioButtons(inputId = "simType", label = NULL,
+                   choices = list("Herla et al (2021)", "Layerwise", "TSA PWL detection", "RTA scaling"), selected = "Herla et al (2021)",
+                   inline = FALSE)
     ),
 
     mainPanel(
@@ -165,13 +174,13 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
       tabsetPanel(
         tabPanel("Profile Alignment",
                  br(),
-                 fixedRow(column(width = 5, HTML("Normalized DTW <b>distance</b>: ")),
-                          column(width = 2, strong(textOutput("normDist")))),
-                 fixedRow(column(width = 5, HTML("<b>similarity</b> measure Phi: ")),
+                 # fixedRow(column(width = 5, HTML("Normalized DTW <b>distance</b>: ")),
+                          # column(width = 2, strong(textOutput("normDist")))),
+                 fixedRow(column(width = 5, HTML("<b>Profile similarity</b>: ")),
                           column(width = 2, strong(textOutput("simSP")))),
                  br(),
-                 fixedRow(column(width = 7, checkboxInput("verboseSim", "Print detailed similarity to console", value = FALSE),
-                                 textOutput("verboseSim"))),
+                 # fixedRow(column(width = 7, checkboxInput("verboseSim", "Print detailed similarity to console", value = FALSE),
+                                 # textOutput("verboseSim"))),
                  conditionalPanel(condition = 'input.ddate',
                                   br(),
                                   fixedRow(column(width = 6, checkboxInput("labelDdate",
@@ -180,9 +189,9 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
         ),
         tabPanel("Cost Density & Warping Path",
                  br(),
-                 fixedRow(column(width = 5, HTML("Normalized DTW <b>distance</b>: ")),
-                          column(width = 2, strong(textOutput("normDistII")))),
-                 fixedRow(column(width = 5, HTML("<b>similarity</b> measure Phi: ")),
+                 # fixedRow(column(width = 5, HTML("Normalized DTW <b>distance</b>: ")),
+                          # column(width = 2, strong(textOutput("normDistII")))),
+                 fixedRow(column(width = 5, HTML("<b>Profile similarity</b>: ")),
                           column(width = 2, strong(textOutput("simSPII")))),
                  br(),
                  fixedRow(column(width = 3, offset = 3, radioButtons("labelHeight", "Units",
@@ -285,7 +294,7 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
       ## UPDATE whenever detect changes in:
       c(profiles$ref, profiles$query, properties$weights, input$reverse, input$ddateNorm, input$wsize, input$dwsize,
         input$layerWeighting, input$initialScaling, input$openEnd, input$checkGlobal, input$stepPattern_m,
-        input$resampling, input$resamplingRate, input$alignDir), {
+        input$resampling, input$resamplingRate, input$alignDir, input$simType), {
 
         ## calculate profile alignment:
         ## requires profiles to continue
@@ -293,20 +302,10 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
         ## 'reverse' UI tick box
         if (input$reverse) profiles <- list(ref = profiles$query, query = profiles$ref)
 
-        ## rescaling and resampling need to go hand in hand:
-        if (input$resampling & !input$initialScaling) {
-          updateCheckboxInput(session, "resampling", value = FALSE)
-          showModal(modalDialog(
-            title = "Sorry!",
-            HTML(paste0("Resampling is not supported for profiles of different total snow height. Turning off resampling..")),
-            easyClose = TRUE
-          ))
-          rrate <- NA
-        } else {
-          ## resampling rate:
-          if (input$resampling) rrate <- input$resamplingRate
-          else rrate <- NA
-        }
+
+        ## resampling rate:
+        if (input$resampling) rrate <- input$resamplingRate
+        else rrate <- NA
 
         ## don't allow to go below MINdwsize:
         if (FALSE) {
@@ -332,6 +331,47 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
           else if (input$stepPattern_m == "symmetricP1") stepPat <- symmetricP1
           else if (input$stepPattern_m == "symmetricP2") stepPat <- symmetricP2
 
+          ## choose simType:
+          if (input$simType == "Herla et al (2021)") simType <- "HerlaEtAl2021"
+          else if (input$simType == "Layerwise") simType <- "layerwise"
+          else if (input$simType == "TSA PWL detection") {
+            simType <- "tsa_WLdetection"
+            newProfiles <- tryCatch({
+              list(query = computeTSA(profiles$query),
+                   ref = computeTSA(profiles$ref))
+            }, error = function(err) err)
+
+            if (inherits(newProfiles, "error")) {
+              showModal(modalDialog(
+                title = "Oha!",
+                HTML(paste0("Can't compute TSA index for your profiles, due to ", newProfiles, ". Reverting to Herla et al (2021) approach.")),
+                easyClose = TRUE
+              ))
+              simType <- "HerlaEtAl2021"
+              updateRadioButtons(session, "simType", selected = "Herla et al (2021)")
+            } else {
+              profiles <- newProfiles
+            }
+          } else if (input$simType == "RTA scaling") {
+            simType <- "rta_scaling"
+            newProfiles <- tryCatch({
+              list(query = computeRTA(profiles$query),
+                   ref = computeRTA(profiles$ref))
+            }, error = function(err) err)
+
+            if (inherits(newProfiles, "error")) {
+              showModal(modalDialog(
+                title = "Oha!",
+                HTML(paste0("Can't compute RTA index for your profiles, due to ", newProfiles, ". Reverting to Herla et al (2021) approach.")),
+                easyClose = TRUE
+              ))
+              simType <- "HerlaEtAl2021"
+              updateRadioButtons(session, "simType", selected = "Herla et al (2021)")
+            } else {
+              profiles <- newProfiles
+            }
+          }
+
           ## alignment direction:
           if (input$alignDir == "Bottom-up (BU)") {
             BU <- TRUE
@@ -346,8 +386,8 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
 
           ## call to dtw:
           align$alignment <- tryCatch({
-            dtwSP(query = mergeIdentLayers(profiles$query, properties = properties$dims),
-                  ref = mergeIdentLayers(profiles$ref, properties = properties$dims),
+            dtwSP(query = profiles$query,
+                  ref = profiles$ref,
                   grain_type_distMat = grainDist,
                   prefLayerWeights = layerWeights,
                   dims = properties$dims, weights = properties$weights,
@@ -355,16 +395,17 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
                   rescale2refHS = input$initialScaling,
                   ddateNorm = input$ddateNorm,
                   windowFunction = warpWindowSP,
-                  window.size = input$wsize, ddate.window.size = input$dwsize,
+                  window.size = input$wsize,
                   step.pattern = stepPat,
                   open.end = input$openEnd, checkGlobalAlignment = input$checkGlobal,
-                  keep.internals = TRUE, bottom.up = BU, top.down = TD)
+                  keep.internals = TRUE, bottom.up = BU, top.down = TD,
+                  simType = simType)
           }, error = function(err) {
             WSIZE <- input$wsize
             alignmentLoop <- function() {
               catch <- tryCatch({
-                dtwSP(query = mergeIdentLayers(profiles$query, properties = properties$dims),
-                      ref = mergeIdentLayers(profiles$ref, properties = properties$dims),
+                dtwSP(query = profiles$query,
+                      ref = profiles$ref,
                       grain_type_distMat = grainDist,
                       prefLayerWeights = layerWeights,
                       dims = properties$dims, weights = properties$weights,
@@ -372,10 +413,11 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
                       rescale2refHS = input$initialScaling,
                       ddateNorm = input$ddateNorm,
                       windowFunction = warpWindowSP,
-                      window.size = WSIZE, ddate.window.size = input$dwsize,
+                      window.size = WSIZE,
                       step.pattern = stepPat,
                       open.end = input$openEnd, checkGlobalAlignment = input$checkGlobal,
-                      keep.internals = TRUE, bottom.up = BU, top.down = TD)
+                      keep.internals = TRUE, bottom.up = BU, top.down = TD,
+                      simType = simType)
               }, error = function(err) {
                 return(NA)
               })
@@ -398,9 +440,10 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
               showModal(modalDialog(
                 title = "Sorry!",
                 HTML(paste0("Something has gone quite wrong and no alignment could be calculated. <br>
-                            Can you reverse what you just did?")),
+                            Try to reverse what you just did and maybe it'll fix it!")),
                 easyClose = TRUE
               ))
+              browser()
             }
 
             return(align$alignment)
@@ -447,25 +490,24 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
     output$simSP <- output$simSPII <- renderText({
       ## requires alignment to continue:
       req(align$alignment)
-      req(align$alignment$queryWarped)
       ## text:
-      paste(formatC(simSP(align$alignment$reference, align$alignment$queryWarped,
-                              gtype_distMat = sim2dist(grainSimilarity_evaluate(triag = FALSE))),
+      paste(formatC(align$alignment$sim,
                     format = "f", digits = 3))
     })
 
-    output$verboseSim <- renderText({
-      ## requires alignment
-      req(align$alignment)
-      req(align$alignment$queryWarped)
-      ## verbose text:
-      if (input$verboseSim) {
-        tmp <- simSP(align$alignment$reference, align$alignment$queryWarped,
-                  gtype_distMat = sim2dist(grainSimilarity_evaluate(triag = FALSE)),
-                  verbose = TRUE)
-        "(printed outside app)"
-      }
-    })
+    ## disabled verbose sim function upon introducing different simTypes (Jan 2022, fherla)
+    # output$verboseSim <- renderText({
+    #   ## requires alignment
+    #   req(align$alignment)
+    #   req(align$alignment$queryWarped)
+    #   ## verbose text:
+    #   if (input$verboseSim) {
+    #     tmp <- simSP(align$alignment$reference, align$alignment$queryWarped,
+    #               gtype_distMat = sim2dist(grainSimilarity_evaluate(triag = FALSE)),
+    #               verbose = TRUE)
+    #     "(printed outside app)"
+    #   }
+    # })
 
     ## ---- communication between UI and server ----
     ## needed in order to make action button disappear when input profiles are provided

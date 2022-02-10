@@ -72,17 +72,20 @@ sim2dist <- function(SimMat) {
 #'
 extractFromScoringMatrix <- function(ScoringFrame, grainType1, grainType2,
                                      profile_handle = NULL) {
-  if (!all(ScoringFrame[upper.tri(ScoringFrame)] ==
-           t(ScoringFrame)[upper.tri(ScoringFrame)])) {
+  if (!isTRUE(all(ScoringFrame[upper.tri(ScoringFrame)] ==
+           t(ScoringFrame)[upper.tri(ScoringFrame)]))) {
     stop("need symmetric matrix-like dataframe!
          upper and lower triangle are not equal.")
   }
-  if (any(is.na(grainType1)) | any(is.na(grainType2))) {
-    warning(paste0("Missing grain types in profile ", profile_handle,
-                   ", assigning default value as specified in ScoringFrame"))
-  }
-  gT1 <- ifelse(is.na(grainType1), "na", grainType1)
-  gT2 <- ifelse(is.na(grainType2), "na", grainType2)
+  # if (any(is.na(grainType1)) | any(is.na(grainType2))) {
+  #   warning(paste0("Missing grain types in profile ", profile_handle,
+  #                  ", assigning default value as specified in ScoringFrame"))
+  # }
+
+  gT1 <- rep("na", times = length(grainType1))
+  gT1[!is.na(grainType1)] <- grainType1[!is.na(grainType1)]
+  gT2 <- rep("na", times = length(grainType2))
+  gT2[!is.na(grainType2)] <- grainType2[!is.na(grainType2)]
 
   d <- ScoringFrame[cbind(gT1, gT2)]
 
@@ -155,6 +158,7 @@ scaleSnowHeight <- function(query, ref = NA, height = NA) {
 
   query$layers$height <- query$layers$height * fac
   query$hs <- tail(query$layers$height, n = 1)
+  query$maxObservedDepth <- query$maxObservedDepth * fac
 
   if ("changes" %in% names(query)) {
     old_changes <- paste0(query$changes, " -> ")
@@ -190,5 +194,37 @@ flipLayers <- function(x) {
 }
 
 
+## --- match() (i.e., %in%) with numeric tolerance----
+#' Match with numeric tolerance
+#' @param x numeric vector
+#' @param y numeric vector
+#' @param d numeric tolerance in form of digits
+#' @return boolean vector equivalently to [match]
+#' @export
+match_with_tolerance <- function(x, y, d = 2){
+  round(x, digits=d) %in% round(y, digits=d)
+}
 
+
+## --- check conceptual grain class ----
+#' Return conceptually similar grain types
+#'
+#' Note, use this function with care. It's a brief helper function for specific usage, not generally applicable!
+#' It is, however, sometimes useful for backtracking layers, see [backtrackLayers].
+#' @param gt a single gtype
+#' @return a character vector of similar gtypes
+#' @examples
+#' return_conceptually_similar_gtypes("SH")
+#' return_conceptually_similar_gtypes("MFcr")
+#' return_conceptually_similar_gtypes("RG")
+#' @export
+return_conceptually_similar_gtypes <- function(gt) {
+  if (gt %in% c("MFcr", "IFsc", "IFrc")) {
+    return(c("MFcr", "IFsc", "IFrc"))
+  } else if (gt %in% c("SH", "DH")) {
+    return(c("SH", "DH"))
+  } else {
+    return(gt)
+  }
+}
 

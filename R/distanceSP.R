@@ -19,13 +19,16 @@
 #' @export
 distanceSP <- function(query, ref, ...) {
 
-  ## DTW alignment of snow profiles
-  alignment <- dtwSP(query, ref, ...)
 
-  ## compute distance via simple similarity measure for snow profiles
-  distance <- tryCatch(
-    (1 - alignment$sim),
-           error = function(alignment)
-             (1 - simSP(alignment$reference, alignment$queryWarped)))
+  ## first: DTW alignment of snow profiles
+  ## second: compute distance via similarity measure for snow profiles
+  distance <- tryCatch({
+    (1 - dtwSP(query, ref, ...)$sim)
+  }, error = function(err) {
+    warning(err)
+    1  # in case of alignment error, set distance to 1
+    }
+  )
+
   return(distance)
 }

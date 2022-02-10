@@ -30,14 +30,14 @@ knitr::include_graphics("figures/legend_gtype.png")
 knitr::include_graphics("figures/costDensity.png")
 
 ## -----------------------------------------------------------------------------
-dtwAlignment$sim <- simSP(dtwAlignment$reference, dtwAlignment$queryWarped, verbose = TRUE)
+dtwAlignment$sim <- simSP(dtwAlignment$reference, dtwAlignment$queryWarped, verbose = TRUE, type = "HerlaEtAl2021")
 
 ## ----medoid, eval=TRUE--------------------------------------------------------
 ## rescaling and resampling of the snow profiles:
 setRR <- reScaleSampleSPx(SPgroup)$set
 
 ## compute the pairwise distance matrix:
-distmat <- medoidSP(setRR, retDistmat = T)$distmat
+distmat <- medoidSP(setRR, retDistmat = T, progressbar = FALSE, verbose = TRUE)$distmat
 
 ## hierarchichal clustering:
 setRR_hcl <- stats::hclust(as.dist(distmat), method = "complete")

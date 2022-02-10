@@ -23,24 +23,23 @@
 #' @export
 grainSimilarity_align <- function(triag = TRUE) {
   DF <- data.frame(
-    #    c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp', 'PPsd', 'FCxr','MFcr')
-    PP = c(1,    0.8, 0.5, 0.2, 0,   0,   0,   0,    1,    1,       0.2,   0),
-    DF = c(NA,   1,   0.8, 0.4, 0,   0,   0.1, 0,    0.8,  0.8,     0.4,   0),
-    RG = c(NA,   NA,  1,   0.4, 0.1, 0,   0.1, 0,    0.5,  0.5,     0.5,   0),
-    FC = c(NA,   NA,  NA,  1,   0.8, 0.6, 0,   0,    0.2,  0.2,     0.8,   0),
-    DH = c(NA,   NA,  NA,  NA,  1,   0.9, 0,   0,    0,    0,       0.7,     0),
-    SH = c(NA,   NA,  NA,  NA,  NA,  1,   0,   0,    0,    0,       0,     0),
-    MF = c(NA,   NA,  NA,  NA,  NA,  NA,  1,   0,    0,    0,       0.1,   0.2),
-    IF = c(NA,   NA,  NA,  NA,  NA,  NA,  NA,  1,    0,    0,       0,     0.8),  # new
-    PPgp = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,   1,    1,       0.2,   0),  # new (kept same as PP)
-    PPsd = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    1,       0.2,   0),  # new (kept same as PP)
-    FCxr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      1,     0),
-    MFcr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,    1),  # new
-    "na" = c(0.6,0.6, 0.6, 0.5, 0.4, 0.4, 0.5, 0.4, 0.6,   0.6,     0.6,   0.4),
-    row.names = c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp','PPsd', 'FCxr','MFcr')
+    #    c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp', 'PPsd', 'FCxr','MFcr', 'na')
+    PP = c(1,    0.8, 0.5, 0.2, 0,   0,   0,   0,    1,    1,       0.2,   0,     0.6),
+    DF = c(NA,   1,   0.8, 0.4, 0,   0,   0.1, 0,    0.8,  0.8,     0.4,   0,     0.6),
+    RG = c(NA,   NA,  1,   0.4, 0.1, 0,   0.1, 0,    0.5,  0.5,     0.5,   0,     0.6),
+    FC = c(NA,   NA,  NA,  1,   0.8, 0.6, 0,   0,    0.2,  0.2,     0.8,   0,     0.5),
+    DH = c(NA,   NA,  NA,  NA,  1,   0.9, 0,   0,    0,    0,       0.7,   0,     0.4),
+    SH = c(NA,   NA,  NA,  NA,  NA,  1,   0,   0,    0,    0,       0,     0,     0.4),
+    MF = c(NA,   NA,  NA,  NA,  NA,  NA,  1,   0,    0,    0,       0.1,   0.2,   0.5),
+    IF = c(NA,   NA,  NA,  NA,  NA,  NA,  NA,  1,    0,    0,       0,     0.8,   0.4),  # new
+    PPgp = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,   1,    1,       0.2,   0,     0.6),  # new (kept same as PP)
+    PPsd = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    1,       0.2,   0,     0.6),  # new (kept same as PP)
+    FCxr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      1,     0,     0.6),
+    MFcr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,    1,     0.4),  # new
+    "na" = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,    NA,     0.5),
+    row.names = c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp','PPsd', 'FCxr','MFcr', 'na')
   )
   if (!triag) {
-    DF["na",] <- c(DF[, "na"], NA)
     DF[upper.tri(DF)] = t(DF)[upper.tri(DF)]
   }
   return(DF)
@@ -62,24 +61,23 @@ grainSimilarity_align <- function(triag = TRUE) {
 #' @export
 grainSimilarity_evaluate <- function(triag = TRUE) {
   DF <- data.frame(
-    #    c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp', 'PPsd', 'FCxr','MFcr')
-    PP = c(1,    0.8, 0.5, 0.2, 0,   0,   0,   0,    1,    1,       0.2,   0),
-    DF = c(NA,   1,   0.8, 0.4, 0,   0,   0,   0,    0.8,  0.8,     0.4,   0),
-    RG = c(NA,   NA,  1,   0.4, 0.1, 0,   0,   0,    0.5,  0.5,     0.5,   0),
-    FC = c(NA,   NA,  NA,  1,   0.4, 0.3, 0,   0,    0.2,  0.2,     0.6,   0),
-    DH = c(NA,   NA,  NA,  NA,  1,   0.9,   0,   0,    0,    0,       0.3,     0),
-    SH = c(NA,   NA,  NA,  NA,  NA,  1,   0,   0,    0,    0,       0,     0),
-    MF = c(NA,   NA,  NA,  NA,  NA,  NA,  1,   0,    0,    0,       0,     0.2),
-    IF = c(NA,   NA,  NA,  NA,  NA,  NA,  NA,  1,    0,    0,       0,     0.8),  # new
-    PPgp = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,   1,    1,       0.2,   0),  # new (kept same as PP)
-    PPsd = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    1,       0.2,   0),  # new (kept same as PP)
-    FCxr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      1,     0),
-    MFcr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,    1),  # new
-    "na" = c(0.5,0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,   0.5,     0.5,   0.5),
-    row.names = c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp','PPsd', 'FCxr','MFcr')
+    #    c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp', 'PPsd', 'FCxr','MFcr', 'na')
+    PP = c(1,    0.8, 0.5, 0.2, 0,   0,   0,   0,    1,    1,       0.2,   0,      0.5),
+    DF = c(NA,   1,   0.8, 0.4, 0,   0,   0,   0,    0.8,  0.8,     0.4,   0,      0.5),
+    RG = c(NA,   NA,  1,   0.4, 0.1, 0,   0,   0,    0.5,  0.5,     0.5,   0,      0.5),
+    FC = c(NA,   NA,  NA,  1,   0.4, 0.3, 0,   0,    0.2,  0.2,     0.6,   0,      0.5),
+    DH = c(NA,   NA,  NA,  NA,  1,   0.9, 0,   0,    0,    0,       0.3,   0,      0.5),
+    SH = c(NA,   NA,  NA,  NA,  NA,  1,   0,   0,    0,    0,       0,     0,      0.5),
+    MF = c(NA,   NA,  NA,  NA,  NA,  NA,  1,   0,    0,    0,       0,     0.2,    0.5),
+    IF = c(NA,   NA,  NA,  NA,  NA,  NA,  NA,  1,    0,    0,       0,     0.8,    0.5),  # new
+    PPgp = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,   1,    1,       0.2,   0,      0.5),  # new (kept same as PP)
+    PPsd = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    1,       0.2,   0,      0.5),  # new (kept same as PP)
+    FCxr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      1,     0,      0.5),
+    MFcr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,    1,      0.5),  # new
+    "na" = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,    NA,     0.5),
+    row.names = c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp','PPsd', 'FCxr','MFcr', 'na')
   )
   if (!triag) {
-    DF["na",] <- c(DF[, "na"], NA)
     DF[upper.tri(DF)] = t(DF)[upper.tri(DF)]
   }
   return(DF)
@@ -103,24 +101,23 @@ grainSimilarity_evaluate <- function(triag = TRUE) {
 #' @export
 layerWeightingMat <- function(triag = TRUE) {
   DF <- data.frame(
-    #    c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp', 'PPsd', 'FCxr','MFcr')
-    PP = c(1,    1,   1,   1,   1,   1,   1,   1,    1,    1,       1,   1),
-    DF = c(NA,   1,   1,   1,   1,   1,   1,   1,    1,    1,       1,   1),
-    RG = c(NA,   NA,  1,   1,   1,   1,   1,   1,    1,    1,       1,   1),
-    FC = c(NA,   NA,  NA,  1,   0.9, 0.9, 1,   1,    1,    1,       1,   1),
-    DH = c(NA,   NA,  NA,  NA,  0,   0,   1,   1,    1,    1,       1,   1),
-    SH = c(NA,   NA,  NA,  NA,  NA,  0,   1,   1,    1,    1,       1,   1),
-    MF = c(NA,   NA,  NA,  NA,  NA,  NA,  1,   1,    1,    1,       1,   1),
-    IF = c(NA,   NA,  NA,  NA,  NA,  NA,  NA,  1,    1,    1,       1,   1),  # new
-    PPgp = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,   1,    1,       1,   1),  # new (kept same as PP)
-    PPsd = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    1,       1,   1),  # new (kept same as PP)
-    FCxr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      1,   1),
-    MFcr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,  0.5),  # new
-    "na" = c( 1,  1,   1,   1,   1,   1,   1,   1,   1,     1,      1,   1),
-    row.names = c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp','PPsd', 'FCxr','MFcr')
+    #    c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp', 'PPsd', 'FCxr','MFcr', 'na')
+    PP = c(1,    1,   1,   1,   1,   1,   1,   1,    1,    1,       1,   1,        1),
+    DF = c(NA,   1,   1,   1,   1,   1,   1,   1,    1,    1,       1,   1,        1),
+    RG = c(NA,   NA,  1,   1,   1,   1,   1,   1,    1,    1,       1,   1,        1),
+    FC = c(NA,   NA,  NA,  1,   0.9, 0.9, 1,   1,    1,    1,       1,   1,        1),
+    DH = c(NA,   NA,  NA,  NA,  0,   0,   1,   1,    1,    1,       1,   1,        1),
+    SH = c(NA,   NA,  NA,  NA,  NA,  0,   1,   1,    1,    1,       1,   1,        1),
+    MF = c(NA,   NA,  NA,  NA,  NA,  NA,  1,   1,    1,    1,       1,   1,        1),
+    IF = c(NA,   NA,  NA,  NA,  NA,  NA,  NA,  1,    1,    1,       1,   1,        1),  # new
+    PPgp = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,   1,    1,       1,   1,        1),  # new (kept same as PP)
+    PPsd = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    1,       1,   1,        1),  # new (kept same as PP)
+    FCxr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      1,   1,        1),
+    MFcr = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,  0.5,      1),  # new
+    "na" = c(NA, NA,  NA,  NA,  NA,  NA,  NA,  NA,  NA,    NA,      NA,  NA,       1),
+    row.names = c('PP','DF','RG','FC','DH','SH','MF','IF','PPgp','PPsd', 'FCxr','MFcr', 'na')
   )
   if (!triag) {
-    DF["na",] <- c(DF[, "na"], NA)
     DF[upper.tri(DF)] = t(DF)[upper.tri(DF)]
   }
   return(5*DF)

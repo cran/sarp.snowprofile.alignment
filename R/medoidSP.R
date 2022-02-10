@@ -9,6 +9,10 @@
 #' Note that the number of possible profile pairs grows exponentially with the number of profiles in the group (i.e.,
 #' O(n^2) calls, where n is the number of profiles in the group).
 #'
+#' Note that the pairwise distance matrix is modified within the function call to represent a symmetric distance matrix.
+#' That is,, however, not originally the case, since `dtwSP(A, B) != dtwSP(B, A)`. The matrix is therefore made symmetric by
+#' setting the similarity between the profiles A and B to `max({dtwSP(A, B), dtwSP(B, A)})`.
+#'
 #' @import sarp.snowprofile
 #'
 #' @param profileList List of snowprofile objects
@@ -17,7 +21,8 @@
 #' @param distmat If you have a precalculated distance matrix, provide it here to compute the medoid on it.
 #' @param verbose print pairwise distance matrix? default FALSE
 #' @param resamplingRate The resampling rate that is used for the whole set if `rescale_resample = TRUE`
-#' @param ... arguments passed to [distanceSP]
+#' @param progressbar Do you want to print a progress bar with recommended package "progress"?
+#' @param ... arguments passed to [distanceSP] and then further to [dtwSP]
 #'
 #' @return If `retDistmat = FALSE` return the (named) index of the medoid snow profile, otherwise return a list with the elements
 #' `iMedoid` and `distmat`.
@@ -31,7 +36,7 @@
 #'
 #'   ## take a list of profiles
 #'   grouplist <- SPgroup[1:4]
-#'   plot(grouplist, SortMethod = 'unsorted', labelOriginalIndices = TRUE)
+#'   plot(grouplist, SortMethod = 'unsorted', xticklabels = "originalIndices")
 #'
 #'   ## calulate medoid profile
 #'   idxMedoid <- medoidSP(grouplist)
@@ -42,7 +47,7 @@
 #' @export
 
 medoidSP <- function(profileList = NULL, rescale_resample = TRUE, retDistmat = FALSE, distmat = NULL, verbose = FALSE,
-                     resamplingRate = 0.5, ...) {
+                     resamplingRate = 0.5, progressbar = require("progress", quietly = TRUE, character.only = TRUE), ...) {
 
 
   ## compute distance matrix from profileList:
@@ -52,27 +57,73 @@ medoidSP <- function(profileList = NULL, rescale_resample = TRUE, retDistmat = F
     sapply(profileList, function(x) if (!is.snowprofile(x)) stop("At least one element in profileList is not a snowprofile"))
 
     ## rescale and resample
-    if (rescale_resample) profileList <- reScaleSampleSPx(profileList, resamplingRate = resamplingRate)$set
+    if (rescale_resample) {
+      profileList <- reScaleSampleSPx(profileList, resamplingRate = resamplingRate)$set
+    }
 
     npros <- length(profileList)
 
-    message(paste0("You are about to compute ", npros, "^2 = ", npros**2, " profile alignments. This will take roughly ",
-               npros**2 * 0.3, " seconds, depending on the profile depths and resampling rate. Starting now..\n"))
+    if (npros > 10)
+      message(paste0("You are about to compute ", npros, "**2 = ", npros**2, " profile alignments. Be patient.."))
 
-    ## calculate pairwise dtw alignment between all profiles in profileList
-    tstart <- Sys.time()
-    pairDMat <- sapply(profileList, function(x)
-      sapply(profileList, function(y)
-        distanceSP(x, y, ...)
-      )
-    )
-    message(paste0("Computed pairwise distance matrix. It actually took \n"))
-    message(print(Sys.time()-tstart))
+
+    ## initialize progressbar:
+    if (progressbar) {
+      pb <- progress::progress_bar$new(
+        format = " [:bar] :percent in :elapsed | eta: :eta",
+        total = npros**2, clear = FALSE, width= 60)
+    }
+
+    ## the function won't fail upon errors, but ensure that these are printed as warnings right away upon occuring:
+    op <- options("warn")
+    on.exit(options(op))
+    options(warn=1)
+
+    ## initialize subfunction to calculate pairwise dtw alignment between all profiles in profileList
+    ## with progressbar
+    if (progressbar) {
+      start_computation <- function(profileList, ...) {
+        pairDMat <- sapply(profileList, function(x)
+          sapply(profileList, function(y)
+            tryCatch({
+              pb$tick()
+              distanceSP(x, y, ...)
+            },
+            error = function(err) {
+              warning(paste0("Error in alignment of ", x$station_id, ", ", y$station_id, ":
+                             ", err))
+              return(NA)
+            })
+          )
+        )
+        return(pairDMat)
+      }
+    } else {
+      ## and without progressbar
+      start_computation <- function(profileList, ...) {
+        pairDMat <- sapply(profileList, function(x)
+          sapply(profileList, function(y)
+            tryCatch({distanceSP(x, y, ...)},
+                     error = function(err) {
+                       warning(paste0("Error in alignment of  ", x$station_id, ", ", y$station_id, ":"))
+                       warning(err)
+                       return(NA)
+                     })
+          )
+        )
+        return(pairDMat)
+      }
+    }
+
+    ## Do computations:
+    pairDMat <- start_computation(profileList, ...)
+
 
   } else {
     pairDMat <- distmat
   }
 
+  diag(pairDMat) <- 0  # ensure that auto-alignments are no partial alignments
   rownames(pairDMat) <- seq(nrow(pairDMat))
   colnames(pairDMat) <- seq(nrow(pairDMat))
   if (verbose) print(pairDMat)
@@ -85,13 +136,13 @@ medoidSP <- function(profileList = NULL, rescale_resample = TRUE, retDistmat = F
   symLT <- apply(matrix(data = c(pairDMat[iLT],
                                  t(pairDMat)[iLT]),
                         ncol = 2),
-                 1, max)
+                 1, max, na.rm = TRUE)
   ## fill back the values twice, with transposing the matrix in between:
   pairDMat[iLT] <- symLT
   pairDMat <- t(pairDMat)
   pairDMat[iLT] <- symLT
   # compute sum of distances to all other profiles within group
-  d <- rowSums(pairDMat)
+  d <- rowSums(pairDMat, na.rm = TRUE)
   iMedoid <- which.min(d)
 
   if (retDistmat) return(list(iMedoid = iMedoid, distmat = pairDMat))

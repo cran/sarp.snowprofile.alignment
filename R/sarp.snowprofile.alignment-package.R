@@ -1,7 +1,7 @@
 #' @keywords internal
 #'
 #' @importFrom grDevices colorRampPalette palette
-#' @importFrom graphics axis barplot contour grconvertX grconvertY image layout lines mtext par points text
+#' @importFrom graphics axis barplot contour grconvertX grconvertY image layout lines mtext par points rect text
 #' @importFrom stats median sd
 #'
 #' @seealso [SPpairs], [dtwSP], [medoidSP]

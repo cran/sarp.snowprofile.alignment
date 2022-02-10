@@ -1,4 +1,4 @@
-citHeader("To cite sarp.snowprofile.alignment in publications use:")
+citHeader("To cite sarp.snowprofile.alignment in publications use the following references:")
 
 citEntry(
   entry    = "Article",
@@ -9,10 +9,24 @@ citEntry(
     person(given = "Patrick", family = "Mair"),
     person(given = "Pascal", family = "Haegeli")
     ),
-  journal  = "Geosci. Model Dev. Discuss.",
-  year     = "accepted, 2020",
-  textVersion = paste("Herla, F., Horton, S., Mair, P., and Haegeli, P.: Snow profile alignment and similarity assessment for aggregating, clustering, and evaluating of snowpack model output for avalanche forecasting, Geosci. Model Dev. Discuss., https://doi.org/10.5194/gmd-2020-171, accepted, 2020."
+  journal  = "Geosci. Model Dev.",
+  year     = "2021",
+  textVersion = paste("Herla, F., Horton, S., Mair, P., and Haegeli, P.: Snow profile alignment and similarity assessment for aggregating, clustering, and evaluating of snowpack model output for avalanche forecasting, Geosci. Model Dev., https://doi.org/10.5194/gmd-14-239-2021, 2021."
   ),
-  doi      = "10.5194/gmd-2020-171"
+  doi      = "10.5194/gmd-14-239-2021"
 )
 
+citEntry(
+  entry    = "Article",
+  title    = "Brief communication: A numerical tool for averaging large data sets of snow stratigraphy profiles useful for avalanche forecasting",
+  author   = c(
+    person(given = "Florian", family = "Herla", role = c("aut", "cre"), email = "fherla@sfu.ca"),
+    person(given = "Pascal", family = "Haegeli"),
+    person(given = "Patrick", family = "Mair")
+    ),
+  journal  = "The Cryosphere Discuss.",
+  year     = "2022",
+  textVersion = paste("Herla, F., Haegeli, P., and Mair, P.: Brief communication: A numerical tool for averaging large data sets of snow stratigraphy profiles useful for avalanche forecasting, The Cryosphere Discuss., https://doi.org/10.5194/tc-2022-29, in review, 2022."
+  ),
+  doi      = "10.5194/tc-2022-29"
+)

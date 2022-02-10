@@ -13,6 +13,8 @@ distMatSP(
   prefLayerWeights = layerWeightingMat(FALSE),
   ddateNorm = 5,
   windowFunction = warpWindowSP,
+  top.down.mirroring = FALSE,
+  warn.if.na.in.distance.calc = FALSE,
   ...
 )
 }
@@ -36,11 +38,16 @@ match those layers above others. To turn weighting scheme off, set \code{prefLay
 
 \item{ddateNorm}{Normalize the deposition date distance by \code{ddateNorm} number of days. Numeric, default 5.}
 
-\item{windowFunction}{a window function analogous to \link{warpWindowSP} (\emph{Note!} designed for a quadratic distance matrix,
-i.e. two profiles with identical numbers of layers. To resample the profiles see \link{resampleSPpairs} and examples below.
-Other compatible window functions can be found in \link[dtw:dtwWindowingFunctions]{dtw::dtwWindowingFunctions}.)}
+\item{windowFunction}{a window function analogous to \link{warpWindowSP} (Other compatible window functions can be
+found in \link[dtw:dtwWindowingFunctions]{dtw::dtwWindowingFunctions}.)}
 
-\item{...}{arguments to the window function, e.g. \code{window.size}, \code{ddate.window.size}, ...}
+\item{top.down.mirroring}{Will the resulting distance matrix be used for top down alignments? i.e., do you want to mirror the
+matrix about its anti-diagonal (top-left/bottom-right diagonal)?}
+
+\item{warn.if.na.in.distance.calc}{most dependent functions in this package should be able to deal with NA values encountered in distance
+calculations. Set this argument to \code{TRUE} if you want to be warned anyways.}
+
+\item{...}{arguments to the window function, e.g. \code{window.size}, \code{window.size.abs}, \code{ddate.window.size}, ...}
 }
 \value{
 A distance matrix of dimension (n x m), where n, m are the number of layers in the query and ref, respectively.
@@ -68,14 +75,17 @@ graphics::image(dMat_noWindow, main = "Default distance matrix without a warping
 dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA,
                   dims = "gtype", weights = 1, prefLayerWeights = NA)
 graphics::image(dMat,
-                main = "... only based grain type, and without preferential layer matching")
+                main = "Only based on grain type, and without preferential layer matching")
+
+## enable preferential layer matching:
+dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA)
+graphics::image(dMat,
+                main = "... with preferential layer matching")
 
 
-## to use a warping window, the profiles need to have equal numbers of layers:
-## i.e., resample them first, then compute dMat with a warping window
-plist <- resampleSPpairs(SPpairs$A_modeled, SPpairs$A_manual)
-dMat <- distMatSP(plist$query, plist$ref)
-graphics::image(dMat, main = "Default with warping window")
+## using a warping window:
+dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, window.size.abs = 50)
+graphics::image(dMat, main = "... and superimposing an absolute warping window of 50 cm")
 
 }
 \seealso{

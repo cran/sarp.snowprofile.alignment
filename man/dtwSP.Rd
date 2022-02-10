@@ -8,13 +8,16 @@ dtwSP(
   query,
   ref,
   open.end = TRUE,
-  checkGlobalAlignment = TRUE,
+  checkGlobalAlignment = "auto",
   keep.internals = TRUE,
   step.pattern = symmetricP1,
   resamplingRate = 0.5,
-  rescale2refHS = TRUE,
+  rescale2refHS = FALSE,
   bottom.up = TRUE,
   top.down = TRUE,
+  nonMatchedSim = 0,
+  nonMatchedThickness = 10,
+  simType = "HerlaEtAl2021",
   ...
 )
 }
@@ -23,18 +26,18 @@ dtwSP(
 
 \item{ref}{The reference snow profile to be warped against}
 
-\item{open.end}{Is an open end alignment desired?}
+\item{open.end}{Is an open end alignment desired? Recommended if profiles will not be rescaled.}
 
-\item{checkGlobalAlignment}{If \code{open.end = TRUE}, do you want to check whether a global alignment performs better (i.e.,
-\code{open.end = FALSE}), and use the optimal one of the computed alignments?}
+\item{checkGlobalAlignment}{Do you want to check whether a global alignment performs better (i.e.,
+\code{open.end = FALSE}), and use the optimal one of the computed alignments? \code{'auto'} sets to \code{TRUE} if \code{simType == "HerlaEtAl2021"} and to \code{FALSE} otherwise.}
 
 \item{keep.internals}{Append resampled and aligned snow profiles as well as internal parameters to the output object?}
 
 \item{step.pattern}{The local slope constraint of the warping path, defaults to Sakoe-Chiba's symmetric pattern
 described by a slope factor of P = 1, see \link[dtw:stepPattern]{dtw::stepPattern}}
 
-\item{resamplingRate}{Resampling rate for a regular depth grid; can also be a vector that provides the depth grid.
-Set to \code{NA} to keep the (original, likely irregular) depth grid (see Details, bullet point 2.2).}
+\item{resamplingRate}{Scalar, numeric resampling rate for a regular depth grid. If the profiles have been rescaled prior to calling this routine, set to \code{NA}.
+To resample onto the smallest possible mutual (original, likely irregular) depth grid (see Details, bullet point 2.2), set to \code{'irregularInterfaces'}.}
 
 \item{rescale2refHS}{Rescale the query snow height to match the ref snow height?}
 
@@ -42,12 +45,19 @@ Set to \code{NA} to keep the (original, likely irregular) depth grid (see Detail
 
 \item{top.down}{Compute an open.end alignment from the snow surface downwards?}
 
-\item{...}{Arguments passed to \code{\link{distMatSP}} and \code{\link{dtw}}, e.g.
+\item{nonMatchedSim}{Similarity value \verb{[0, 1]} for non-matched layers, see \link{simSP}. indifference = 0.5, penalty < 0.5}
+
+\item{nonMatchedThickness}{How strongly should the thicknesses of non-matched layers influence the resulting similarity of
+the profiles? The smaller this (positive!) value, the more influence; and vice versa. See \link{simSP} for more details.}
+
+\item{simType}{the similarity between two profiles can be computed with different approaches, see \link{simSP}}
+
+\item{...}{Arguments passed to \code{\link{distMatSP}}, and \code{\link{dtw}} e.g.
 \itemize{
 \item \code{dims}, \code{weights} (defaults specified in \code{\link{distMatSP}})
 \item \code{ddateNorm}, numeric, normalize deposition date (default specified in \code{\link{distMatSP}})
 \item \code{windowFunction}, default \code{\link{warpWindowSP}}
-\item \code{window.size}, \code{ddate.window.size} (defaults specified in \code{\link{warpWindowSP}})
+\item \code{window.size}, \code{window.size.abs}, \code{ddate.window.size} (defaults specified in \code{\link{warpWindowSP}})
 \item \code{gtype_distMat}, (default specified in \code{\link{distMatSP}}), cf. e.g. \link{grainSimilarity_align}
 \item \code{prefLayerWeights}, weighting matrix for preferential layer matching, e.g. \link{layerWeightingMat}
 }}
@@ -63,43 +73,61 @@ provides a variety of options, where the default values represent a good startin
 profiles.
 }
 \details{
-The individual steps of aligning snow profiles:
+The individual steps of aligning snow profiles (which can all be managed from this function):
 \enumerate{
 \item (optional) \strong{Rescale} the profiles to the same height (cf., \link{scaleSnowHeight})
 \item \strong{Resample} the profiles onto the same depth grid. 2 different approaches:
 \itemize{
 \item regular grid with a sampling rate that is provided by the user (recommended, cf., \link{resampleSP}).
-This approach requires to rescale the profiles.
-\item irregular grid that includes all layer interfaces within the two profiles (i.e., set \code{resamplingRate = NA}) (cf., \link{resampleSPpairs})
+\item irregular grid that includes all layer interfaces within the two profiles (i.e., set \code{resamplingRate = 'irregularInterfaces'}) (cf., \link{resampleSPpairs})
 }
 \item Compute a weighted \strong{local cost matrix} from multiple layer characteristics (cf., \link{distMatSP})
 \item \strong{Match the layers} of the profiles with a call to \link{dtw} (eponymous R package)
 \item Align the profiles by \strong{warping} the query profile onto the reference profile (cf., \link{warpSP})
 \item (optional) If the function has been called with multiple different boundary conditions (global, top-down, or bottom-up alignments),
-the optimal alignment as determined by \link{simSP} will be returned.
+the optimal alignment as determined by \link{simSP} or by the DTW distance will be returned.
+\item (optional) Compute a \strong{similarity score} for the two profiles with \link{simSP}
 }
 }
 \note{
-While DTW can be applied to sequences of different lengths, it is necessary that the two snow profiles have the same
-number of layers for optimally warping one profile onto the other one and thereby aligning them. As long as the profiles
-are rescaled and resampled this requirement is satisfied. This requirement is inconvenient only if the profiles
-are not supposed to be rescaled (e.g. in a layer tracking application). In these cases, a workaround is to rescale the
-profiles anyway, but increase the window size of the warping window proportionally to the snow height offset. In these cases
-also consider including layer date information to reduce the likelihood of bad alignments.
-
 Furthermore, the alignment based on grain type information is currently only possible for specific grain types. These grain types
 require a pre-defined distance or similarity, such as given by \link{grainSimilarity_align}. If your profile contains other grain types,
 you are required to define your custom \code{grainSimilarity} matrix.
+
+The package used to require re-scaling of the profiles to identical snow heights. This requirement has been removed in v1.1.0.
+Profiles therefore can be resampled onto a regular grid, whilst keeping their original total snow heights. The alignment can
+then be carried out bottom.up or top.down with a relative or absolute window size. If the profiles have different snow heights and a relative
+window size is provided, the window size is computed using the larger snow height of the two profiles (e.g., Profile A HS 100 cm,
+Profile B HS 80 cm; window.size = 0.3 translates to an effective window size of +/- 33 cm).
+See examples for alignments without prior re-scaling.
 }
 \examples{
 
+## Align a modeled and a manual snow profile, primarily based on default settings:
 dtwAlignment <- dtwSP(SPpairs$A_modeled, SPpairs$A_manual, open.end = FALSE)
 
-## dtwSP object:
+## check out the resulting dtwSP alignment object:
 summary(dtwAlignment)
-plot(dtwAlignment$queryWarped)
 plotSPalignment(dtwAlignment = dtwAlignment)
+plotCostDensitySP(dtwAlignment)
 
+
+## Align profiles from subsequent days without re-scaling them:
+dtwAlignment <- dtwSP(SPpairs$C_day3, SPpairs$C_day1, resamplingRate = 0.5, rescale2refHS = FALSE,
+                      window.size.abs = 30)
+## Note, per default both bottom.up and top.down alignments have been considered,
+#  let's check out which one was suited better:
+dtwAlignment$direction  # i.e., bottom up
+## Check it out visually:
+plotSPalignment(dtwAlignment = dtwAlignment,
+                mainQu = "3 Days after...", mainRef = "...the reference profile.")
+plotCostDensitySP(dtwAlignment, labelHeight = TRUE)
+
+}
+\references{
+Herla, F., Horton, S., Mair, P., & Haegeli, P. (2021). Snow profile alignment and similarity assessment for aggregating,
+clustering, and evaluating of snowpack model output for avalanche forecasting. Geoscientific Model Development, 14(1), 239–258.
+https://doi.org/10.5194/gmd-14-239-2021
 }
 \seealso{
 \link{plotSPalignment}, \link{simSP}
