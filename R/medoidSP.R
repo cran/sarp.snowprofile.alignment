@@ -75,9 +75,9 @@ medoidSP <- function(profileList = NULL, rescale_resample = TRUE, retDistmat = F
     }
 
     ## the function won't fail upon errors, but ensure that these are printed as warnings right away upon occuring:
-    op <- options("warn")
-    on.exit(options(op))
-    options(warn=1)
+    # op <- options("warn")
+    # on.exit(options(op))
+    # options(warn=1)
 
     ## initialize subfunction to calculate pairwise dtw alignment between all profiles in profileList
     ## with progressbar
@@ -90,8 +90,7 @@ medoidSP <- function(profileList = NULL, rescale_resample = TRUE, retDistmat = F
               distanceSP(x, y, ...)
             },
             error = function(err) {
-              warning(paste0("Error in alignment of ", x$station_id, ", ", y$station_id, ":
-                             ", err))
+              warning(paste0(paste(err), " (during alignment of  ", x$station_id, ", ", y$station_id, ")"), immediate. = TRUE)
               return(NA)
             })
           )
@@ -105,8 +104,7 @@ medoidSP <- function(profileList = NULL, rescale_resample = TRUE, retDistmat = F
           sapply(profileList, function(y)
             tryCatch({distanceSP(x, y, ...)},
                      error = function(err) {
-                       warning(paste0("Error in alignment of  ", x$station_id, ", ", y$station_id, ":"))
-                       warning(err)
+                       warning(paste0(paste(err), " (during alignment of  ", x$station_id, ", ", y$station_id, ")"), immediate. = TRUE)
                        return(NA)
                      })
           )

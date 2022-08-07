@@ -41,7 +41,7 @@ An average profile as computed by \link{dbaSP} summarizes the prevalent layer pr
 understand the distribution of layer properties within the set, use this function to retrieve layers of interest from the individual profiles of the original profile set.
 }
 \examples{
-## Not yet included; create avgProfile example object first.
+## See Vignette for examples.
 
 }
 \author{

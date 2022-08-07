@@ -94,6 +94,9 @@ an average profile from the previous day. The routine modifies several parameter
 parameters differ from the defaults specified in \link{dtwSP}, which are held very generic, whereas the application in this function
 is much more specific to certain requirements and algorithm behavior. For more details, refer to the reference paper.
 }
+\details{
+Computing the seasonal average profile for an entire season and about 100 grid points (with a max of 150 cm snow depth) takes roughly 60 mins.
+}
 \note{
 \itemize{
 \item If you don't provide an AvgDayBefore, it will be computed with \link{averageSP} and \emph{default} parameters
@@ -109,30 +112,47 @@ Conclusion: If you want to backtrack layers from the seasonal average profile, y
 run_the_examples <- FALSE  # exclude long-running examples
 if (run_the_examples) {
 
-## compute average seasonal profile for an entire season
-## takes about 60 mins for a region of hundred profiles and max 150 cm snow depth
-avgGNP <- averageSPalongSeason(gnp_dataset, keep.profiles = TRUE)
+## compute average timeseries for simplistic example data set 'SPspacetime'
+## first: label weak layers (you can choose your own rules and thresholds!)
+SPspacetime <- snowprofileSet(lapply(SPspacetime, function(sp) {
+ labelPWL(sp, pwl_gtype = c("SH", "DH", "FC", "FCxr"), threshold_RTA = 0.8)
+}))  # label weak layers in each profile of the profile set 'SPspacetime'
+
+## second: average along several days
+avgTS <- averageSPalongSeason(SPspacetime)
+
 ## explore resulting object
-names(avgGNP)
-plot(avgGNP$avgs)  # timeseries figure
-lines(avgGNP$meta$date, avgGNP$meta$hs_median)  # add line representing median snow height
-plot(avgGNP$sets$`2018-12-08`, SortMethod = "hs")  # plot individual profiles at a given day
+names(avgTS)
+
+# timeseries figure
+plot(avgTS$avgs, main = "average time series")
+# add line representing median snow height
+lines(avgTS$meta$date, avgTS$meta$hs_median)
+# add line representing median new snow amounts
+lines(avgTS$meta$date, avgTS$meta$hs - avgTS$meta$thicknessPPDF_median, lty = 'dashed')
+
+# individual profile sets from one day
+plot(avgTS$sets[[1]], SortMethod = "hs", main = "individual profiles from first day")
+
 
 ## backtrack individual layers of the average profile...
-individualLayers <- backtrackLayers(avgProfile = avgGNP$avgs$`2018-12-08`,
-                      profileSet = avgGNP$sets$`2018-12-08`,
-                      layer = findPWL(avgGNP$avgs$`2018-12-08`, pwl_gtype = c("SH", "DH"),
-                                      pwl_date = "2018-11-23"))
+individualLayers <- backtrackLayers(avgProfile = avgTS$avgs[[1]],
+                      profileSet = avgTS$sets[[1]],
+                      layer = findPWL(avgTS$avgs[[1]], pwl_gtype = c("SH", "DH"),
+                                      pwl_date = "2018-10-17", threshold_RTA = 0.8))
 ## ... to retrieve summary statistics or distributions, e.g. stability distribution
-hist(individualLayers$rta)
+hist(individualLayers[[1]]$rta)
+hist(individualLayers[[1]]$depth)
+
+## see the Vignette about averaging profiles for more examples!
 
 
 }
 
 }
 \references{
-Herla, F., Haegeli, P., and Mair, P.: Brief communication: A numerical tool for averaging large data sets of snow
-stratigraphy profiles useful for avalanche forecasting, The Cryosphere Discuss., https://doi.org/10.5194/tc-2022-29, in review, 2022.
+Herla, F., Haegeli, P., and Mair, P. (2022). A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting,
+The Cryosphere, 16(8), 3149–3162, https://doi.org/10.5194/tc-16-3149-2022
 }
 \seealso{
 \link{dbaSP}, \link{averageSP}, \link[sarp.snowprofile:findPWL]{sarp.snowprofile::labelPWL}

@@ -1,8 +1,8 @@
 ---
-title: "Basic workflow"
+title: "Basic workflow of layer matching and profile alignment"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Basic workflow}
+  %\VignetteIndexEntry{Basic workflow of layer matching and profile alignment}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

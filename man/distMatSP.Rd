@@ -24,7 +24,7 @@ distMatSP(
 \item{ref}{The ref snowprofile object}
 
 \item{dims}{Character vector containing the layer properties to calculate the distance over. Currently implemented
-are the properties \code{hardness}, \code{gtype}, \code{ddate}.}
+are the properties \code{hardness}, \code{gtype}, \code{ddate}, \code{density}, \code{ogs}.}
 
 \item{weights}{Numeric vector of the same length as \code{dims} specifying the averaging weights to each element of dims.}
 

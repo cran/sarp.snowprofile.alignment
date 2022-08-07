@@ -1,4 +1,16 @@
+# sarp.snowprofile.alignment 1.2.1
 
+  - Added the vignette *Averaging of profiles and retrieval of distributions*
+    --> `browseVignettes(package = "sarp.snowprofile.alignment")`
+
+# sarp.snowprofile.alignment 1.2.0
+
+  - Added density and optical grain size (ogs) as warping variables for alignment
+  - Averaging of profiles:
+      - include slab_rhogs, p_unstable, bdate, scalingFactor, ppu_all in `warpSP` and all `dba` routines
+      - fix minor bugs for averaging shallow profiles and backtracking layers
+      - add more detailed documentation (also for future developers)
+  - Robustify `medoidSP`
 
 # sarp.snowprofile.alignment 1.1.4
 
@@ -15,6 +27,7 @@
       - Implemented ability to configure the absolute warping window (instead of relative one only)
       - Included first systematic tests (of various different alignment scenarios)
       - Fix bug in `warpSP`, which was introduced due to changes in the `sarp.snowprofile::snowprofile` data class (i.e., introduction of `unobservedBasalLayer`s)
+      - package shiny is not imported anymore, but only suggested --> enhances usability on clusters
 
 # sarp.snowprofile.alignment 1.0.0
 

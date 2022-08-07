@@ -17,6 +17,7 @@ averageSP(
   breakAtSim = 0.9,
   breakAfter = 2,
   verbose = FALSE,
+  tz = "auto",
   ...
 )
 
@@ -31,6 +32,7 @@ dbaSP(
   breakAfter = 1,
   plotChanges = FALSE,
   verbose = TRUE,
+  tz = "auto",
   ...
 )
 }
@@ -64,6 +66,8 @@ Meaningful range is between \verb{[0.1, 0.5]}. Values larger than 0.5 get set to
 
 \item{verbose}{print similarities between old and new average in between iterations?}
 
+\item{tz}{timezone of profiles; necessary for assigning the correct timezone to the average profile's ddate/bdate. Either \code{'auto'} or a timezone known to \verb{[as.POSIXct]}.}
+
 \item{...}{alignment configurations which are passed on to \link{dbaSP} and then further to \link{dtwSP}. Note, that you can't provide \code{rescale2refHS}, which is always set to FALSE. If you wish to rescale
 the profiles, read the description of the \code{SPx} parameter and the examples.}
 
@@ -81,7 +85,22 @@ A list of class \code{avgSP} that contains the fields
 \item \verb{$avg}: the resulting average profile
 \item \verb{$set}: the corresponding resampled profiles of the group
 \item \verb{$call}: (only with \code{averageSP}) the function call
-\item \verb{$prelabeledPWLs}: (only with \code{averageSP}) boolean scalar whether PWLs (or any other layers of interest) were prelabeled before this routine (\code{TRUE}) or labeled by this routine (\code{FALSE})
+\item \verb{$prelabeledPWLs}: (only with \code{averageSP}) boolean scalar whether PWLs (or any other layers of interest) were prelabeled before this routine (\code{TRUE}) or
+labeled by this routine with the defaults specified in \code{classifyPWLs} (\code{FALSE})
+}
+
+The profile layers of the average profile refer to the median properties of the predominant layers. For example, if you labeled all SH/DH layers as your 'layersOfInterest',
+and you find a SH or DH layer in the average profile, then it means that the predominant grain type is SH/DH (i.e., more profiles than specified in \code{proportionPWL} have that layer)
+and layer properties like hardness, p_unstable, etc refer to the median properties of these SH/DH layers. If you find a RG layer in your average profile, it means that most
+profiles have that RG layer and the layer properties refer to the median properties of all these RG layers. There are two exceptions to this rule, one for \code{height}/\code{depth}, and one
+for layer properties with the ending \verb{_all}, such as \code{ppu_all}:
+\itemize{
+\item \code{height} and \code{depth} provide the vertical grid of the average profile, and for algorithmic reasons, this grid is not always equal to the actual median height or depth
+of the predominant layers. To account for that, two layer columns exist called \code{medianPredominantHeight} and \code{medianPredominantDepth}.
+\item Properties ending with \verb{_all}: For example, while \code{ppu} refers to the proportion of profiles, whose \emph{predominant} layers are unstable (i.e., \code{p_unstable} >= 0.77),
+\code{ppu_all} refers to the the proportion of profiles, whose layers are unstable while taking into account \emph{all} individual layers matched to this average layer
+(i.e., despite grain type, etc).
+\item Other layer properties specific to the average profile: \code{distribution} ranges between \verb{[0, 1]} and specifies the proportion of profiles that contain the predominant layer described in the other properties.
 }
 }
 \description{
@@ -91,6 +110,15 @@ between the average profile and the profile set). To pay appropriate attention t
 You can either do that manually before calling this routine to suit your personal needs, or you can provide specific properties (in \code{classifyPWLs})
 so that weak layers be labeled according to these properties by \link[sarp.snowprofile:findPWL]{sarp.snowprofile::labelPWL}.
 For more details, refer to the reference paper.
+}
+\details{
+Technical note: Since the layer characteristics of the average profile represent the median characteristics of the individual profiles, it can happen that ddates of the
+averaged layers are not in a monotonical order. That is, of course unphysical, but we specifically decided not to override these values to highlight these slight inconsistencies
+to users, so that they can decide how to deal with them. As a consequence, the function \link[sarp.snowprofile:deriveDatetag]{sarp.snowprofile::deriveDatetag} does not work for these average profiles with ddate
+inconsistencies, but throws an error. The suggested workaround for this issue is to apply that function to all individual profiles \emph{before} computing the average profile. This
+ensures that bdates or datetags are also included in the average profile.
+
+For developers: Including new variables into the averaging/dba routines can be done easily by following commit #9f9e6f9
 }
 \section{Functions}{
 \itemize{
@@ -120,15 +148,31 @@ if (!this_example_runs_about_10s) {  # exclude from cran checks
   par(opar)
 
 
-  ## compute the average profile of the demo object 'SPgroup'
+## compute the average profile of the demo object 'SPgroup'
 ## * by labeling SH/DH/FC/FCxr layers with an RTA threshold of 0.65 as weak layers,
 ## * otherwise as above
 
-  SPx <- snowprofileSet(lapply(SPgroup, computeRTA))
+  SPx <- computeRTA(SPgroup)
   avgList <- averageSP(SPx, n = 3,
                        classifyPWLs = list(pwl_gtype = c("SH", "DH", "FC", "FCxr"),
                                            threshold_RTA = 0.65),
                        classifyCRs = NULL)
+
+  opar <- par(mfrow = c(1, 2))
+  plot(avgList$avg, ymax = max(summary(avgList$set)$hs))
+  plot(avgList$set, SortMethod = "unsorted", xticklabels = "originalIndices")
+  par(opar)
+
+## compute the average profile of the other demo object 'SPgroup2', which
+## contains more stability indices, such as SK38 or p_unstable
+## * by labeling SH/DH/FC/FCxr layers that either
+##   - have an SK38 below 0.95, *or*
+##   - have a p_unstable above 0.77
+
+  SPx <- snowprofileSet(SPgroup2)
+  avgList <- averageSP(SPx,
+                       classifyPWLs = list(pwl_gtype = c("SH", "DH", "FC", "FCxr"),
+                                           threshold_SK38 = 0.95, threshold_PU = 0.77))
 
   opar <- par(mfrow = c(1, 2))
   plot(avgList$avg, ymax = max(summary(avgList$set)$hs))
@@ -154,8 +198,8 @@ if (FALSE) {  # don't run in package check to save time
 }
 }
 \references{
-Herla, F., Haegeli, P., and Mair, P.: Brief communication: A numerical tool for averaging large data sets of snow
-stratigraphy profiles useful for avalanche forecasting, The Cryosphere Discuss., https://doi.org/10.5194/tc-2022-29, in review, 2022.
+Herla, F., Haegeli, P., and Mair, P. (2022). A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting,
+The Cryosphere, 16(8), 3149–3162, https://doi.org/10.5194/tc-16-3149-2022
 }
 \seealso{
 \link{averageSPalongSeason}

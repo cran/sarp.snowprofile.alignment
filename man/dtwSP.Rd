@@ -18,6 +18,7 @@ dtwSP(
   nonMatchedSim = 0,
   nonMatchedThickness = 10,
   simType = "HerlaEtAl2021",
+  apply_scalingFactor = FALSE,
   ...
 )
 }
@@ -51,6 +52,8 @@ To resample onto the smallest possible mutual (original, likely irregular) depth
 the profiles? The smaller this (positive!) value, the more influence; and vice versa. See \link{simSP} for more details.}
 
 \item{simType}{the similarity between two profiles can be computed with different approaches, see \link{simSP}}
+
+\item{apply_scalingFactor}{Setting for \link{simSP} in case \verb{simType == "layerwise}.}
 
 \item{...}{Arguments passed to \code{\link{distMatSP}}, and \code{\link{dtw}} e.g.
 \itemize{

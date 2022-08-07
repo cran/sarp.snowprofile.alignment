@@ -4,7 +4,6 @@
 #' given as input to this function, or are uploaded to the app interactively as caaml files.
 #' Example profiles are also provided in the app.
 #'
-#' @import shiny
 #' @import grid
 #' @import sarp.snowprofile
 #'
@@ -32,15 +31,15 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
 
   ## --- handle input profiles ----
   if (!all(is.na(query)) && !all(is.na(ref))) {  # start app with input profiles
-    values <- reactiveValues(providedInput = TRUE, query = query, ref = ref)
+    values <- shiny::reactiveValues(providedInput = TRUE, query = query, ref = ref)
   } else {
-    values <- reactiveValues(providedInput = FALSE)
+    values <- shiny::reactiveValues(providedInput = FALSE)
   }
   ## --- UI ----
-  ui <- fluidPage(
-    withMathJax(),
-    tags$head(tags$style(type="text/css", ".container-fluid {  max-width: 1300px; }"),
-              tags$head(tags$script('
+  ui <- shiny::fluidPage(
+    shiny::withMathJax(),
+    shiny::tags$head(shiny::tags$style(type="text/css", ".container-fluid {  max-width: 1300px; }"),
+                     shiny::tags$head(shiny::tags$script('
                                 var dimension = [0, 0];
                                 $(document).on("shiny:connected", function(e) {
                                     dimension[0] = window.innerWidth;
@@ -54,83 +53,83 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
                                 });
                             '))
               ),
-    headerPanel("DTW snow profile alignment app"),
-    fluidRow(
-      column(4, offset = 0,
+    shiny::headerPanel("DTW snow profile alignment app"),
+    shiny::fluidRow(
+      shiny::column(4, offset = 0,
              ## Source - Select whether to browse
-             conditionalPanel(condition = "!output.onInput",
-                              selectInput(inputId = "source", label = "Source",
-                                           choices = c("1) Variable local warping", "2) Pre/post storm", "3) Human vs modeled",
+             shiny::conditionalPanel(condition = "!output.onInput",
+                                     shiny::selectInput(inputId = "source", label = "Source",
+                                                 choices = c("1) Variable local warping", "2) Pre/post storm", "3) Human vs modeled",
                                                        "Browse for your own CAAML files",
                                                        "Browse for your own PRF file"),
-                                           selected = "1) Variable local warping"),
+                                                 selected = "1) Variable local warping"),
                               ## Action button
-                              actionButton("do", "Load Profiles", style = "background-color: silver;  color:navy"),
-                              br(),
-                              hr()
+                              shiny::actionButton("do", "Load Profiles", style = "background-color: silver;  color:navy"),
+                              shiny::br(),
+                              shiny::hr()
                              ),
-             h4("Profile Settings"),
+             shiny::h4("Profile Settings"),
              ## Reverse checkbox
-             checkboxInput("reverse", "Switch query and reference", value = FALSE),
+             shiny::checkboxInput("reverse", "Switch query and reference", value = FALSE),
              ## Scale profiles to equal heights before alignment
-             checkboxInput("initialScaling", "Scale profiles to equal height before aligning", value = FALSE),
+             shiny::checkboxInput("initialScaling", "Scale profiles to equal height before aligning", value = FALSE),
              ## resampling rate:
-             checkboxInput("resampling", "Resample profiles onto regular grid", value = TRUE),
-             conditionalPanel(condition = "input.resampling",
-                              sliderInput("resamplingRate", "sampling rate (cm)", min = 0.25, max = 5, value = 0.5, step = 0.25)),
+             shiny::checkboxInput("resampling", "Resample profiles onto regular grid", value = TRUE),
+             shiny::conditionalPanel(condition = "input.resampling",
+                                     shiny::sliderInput("resamplingRate", "sampling rate (cm)", min = 0.25, max = 5, value = 0.5, step = 0.25)),
       ),
-      column(8,
+      shiny::column(8,
              ## Browse CAAML or PRF files:
-             conditionalPanel(condition = "(!output.onInput && input.source == 'Browse for your own CAAML files')",
-                              div(style = "display: inline-block; vertical-align: top;",
-                                fileInput("queryFile", h5("Query"), accept = c(".caaml"))),
-                              div(style = "display: inline-block; vertical-align: top; height: 1px; width: 25px"),
-                              div(style = "display: inline-block; vertical-align: top;",
-                                  fileInput("refFile", h5("Reference"), accept = c(".caaml")))
+             shiny::conditionalPanel(condition = "(!output.onInput && input.source == 'Browse for your own CAAML files')",
+                                     shiny::div(style = "display: inline-block; vertical-align: top;",
+                                                shiny::fileInput("queryFile", shiny::h5("Query"), accept = c(".caaml"))),
+                                     shiny::div(style = "display: inline-block; vertical-align: top; height: 1px; width: 25px"),
+                                     shiny::div(style = "display: inline-block; vertical-align: top;",
+                                                shiny::fileInput("refFile", shiny::h5("Reference"), accept = c(".caaml")))
                               ),
-             conditionalPanel(condition = "(!output.onInput && input.source == 'Browse for your own PRF file')",
-                              div(style = "display: inline-block; vertical-align: top;",
-                                  fileInput("prfFile", h5("PRF file"), accept = c(".prf"))),
-                              helpText("Note, the PRF file needs to contain at least two profiles, the first and second of which will be the query and reference profiles.")
+             shiny::conditionalPanel(condition = "(!output.onInput && input.source == 'Browse for your own PRF file')",
+                                     shiny::div(style = "display: inline-block; vertical-align: top;",
+                                                shiny::fileInput("prfFile", shiny::h5("PRF file"), accept = c(".prf"))),
+                                     shiny::helpText("Note, the PRF file needs to contain at least two profiles, the first and second of which will be the query and reference profiles.")
                               )
       ),
-      column(12, hr())
+      shiny::column(12, shiny::hr())
     ),
 
-    sidebarPanel(
+    shiny::sidebarPanel(
       # tags$head(tags$style(type="text/css", "select { min-width: 300px; max-width: 300px;}"),
       #           tags$style(type="text/css", ".span4 { min-width: 320px; max-width: 320px;}"),
       #           tags$style(type="text/css", ".well { min-width: 300px; max-width: 300px;}")
       #           ),
       width = 3,
-      h4("Alignment Settings"),
-      checkboxInput("openEnd", "Open End alignment", value = TRUE),
-      conditionalPanel(condition = "input.openEnd",
-                       checkboxInput("checkGlobal", "Check global alignment", value = TRUE)),
-      radioButtons("alignDir", "Direction of alignment",
+      shiny::h4("Alignment Settings"),
+      shiny::checkboxInput("openEnd", "Open End alignment", value = TRUE),
+      shiny::conditionalPanel(condition = "input.openEnd",
+                              shiny::checkboxInput("checkGlobal", "Check global alignment", value = TRUE)),
+      shiny::radioButtons("alignDir", "Direction of alignment",
                    choices = list("Bottom-up (BU)", "Top-down (TD)", "BU/TD"),
                    selected = "BU/TD"),
       ## use weighted grain Similarity matrix:
-      checkboxInput("layerWeighting", "Apply a layer weighting scheme to the grain similarity matrix for preferential layer matching", value = TRUE),
-      checkboxInput("ddate", "Add deposition date info", value = FALSE),
-      conditionalPanel(condition = "input.ddate",
-                       sliderInput("ddateNorm",
+      shiny::checkboxInput("layerWeighting", "Apply a layer weighting scheme to the grain similarity matrix for preferential layer matching", value = TRUE),
+      shiny::checkboxInput("ddate", "Add deposition date info", value = FALSE),
+      shiny::conditionalPanel(condition = "input.ddate",
+                              shiny::sliderInput("ddateNorm",
                                    label = "Date normalization factor (unit: days)",
                                    min = 1, max = 20, value = 3)
       ),
 
       ## Set weights
-      h4("Weights"),
-      sliderInput(inputId = "weightSlider",
+      shiny::h4("Weights"),
+      shiny::sliderInput(inputId = "weightSlider",
                   label = " grain type | hardness",
                            # div(style="width: 300px;",
                            #    div(style='float:left;', 'grain type'),
                            #    div(style='margin-left: 65%;', 'hardness')),
                   min = 0, max = 1, value = 0.6),
 
-      conditionalPanel(
+      shiny::conditionalPanel(
         condition = "input.ddate",
-        sliderInput(inputId = "weightSlider2",
+        shiny::sliderInput(inputId = "weightSlider2",
                     ## how to top-align following labels??
                     ## tried vertical-align:top without success
                     label = "{grain type & hardness} | ddate",
@@ -141,66 +140,66 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
                             # ),
                     min = 0, max = 1, value = 0.7)
       ),
-      br(),
+      shiny::br(),
       ## Set warping window
-      h4("Warping window"),
-      sliderInput(inputId = "wsize", "percentage of layers/height",
+      shiny::h4("Warping window"),
+      shiny::sliderInput(inputId = "wsize", "percentage of layers/height",
                   min = 0, max = 1, value = 0.3),
       # conditionalPanel(condition = "input.ddate",
       #                  sliderInput(inputId = "dwsize", "number of days",
       #                              min = 5, max = 40, value = 40)),
 
-      br(),
+      shiny::br(),
       ## Step pattern
-      h4("Local slope constraint"),
-      helpText("symmetricP1 limits layer stretching and compressing to double/half the original thickness"),
-      radioButtons(inputId = "stepPattern_m", label = NULL,
+      shiny::h4("Local slope constraint"),
+      shiny::helpText("symmetricP1 limits layer stretching and compressing to double/half the original thickness"),
+      shiny::radioButtons(inputId = "stepPattern_m", label = NULL,
                   choices = list("unconstrained", "symmetricP1", "symmetricP2"), selected = "symmetricP1",
                   inline = FALSE),
 
-      br(),
+      shiny::br(),
       ## Similarity type
-      h4("Similarity assessment method"),
-      radioButtons(inputId = "simType", label = NULL,
+      shiny::h4("Similarity assessment method"),
+      shiny::radioButtons(inputId = "simType", label = NULL,
                    choices = list("Herla et al (2021)", "Layerwise", "TSA PWL detection", "RTA scaling"), selected = "Herla et al (2021)",
                    inline = FALSE)
     ),
 
-    mainPanel(
-      tags$style(HTML("
+    shiny::mainPanel(
+      shiny::tags$style(shiny::HTML("
     .tabbable > .nav > li > a                  {background-color: silver;  color:navy}
     .tabbable > .nav > li[class=active]    > a {background-color: white; color:black}
     ")),
-      tabsetPanel(
-        tabPanel("Profile Alignment",
-                 br(),
+      shiny::tabsetPanel(
+        shiny::tabPanel("Profile Alignment",
+                        shiny::br(),
                  # fixedRow(column(width = 5, HTML("Normalized DTW <b>distance</b>: ")),
                           # column(width = 2, strong(textOutput("normDist")))),
-                 fixedRow(column(width = 5, HTML("<b>Profile similarity</b>: ")),
-                          column(width = 2, strong(textOutput("simSP")))),
-                 br(),
+                 shiny::fixedRow(shiny::column(width = 5, shiny::HTML("<b>Profile similarity</b>: ")),
+                                 shiny::column(width = 2, shiny::strong(shiny::textOutput("simSP")))),
+                 shiny::br(),
                  # fixedRow(column(width = 7, checkboxInput("verboseSim", "Print detailed similarity to console", value = FALSE),
                                  # textOutput("verboseSim"))),
-                 conditionalPanel(condition = 'input.ddate',
-                                  br(),
-                                  fixedRow(column(width = 6, checkboxInput("labelDdate",
+                 shiny::conditionalPanel(condition = 'input.ddate',
+                                         shiny::br(),
+                                         shiny::fixedRow(shiny::column(width = 6, shiny::checkboxInput("labelDdate",
                                                                            "Label deposition date", value = FALSE)))),
-                 plotOutput("alignmentPlot", height = "650px")
+                 shiny::plotOutput("alignmentPlot", height = "650px")
         ),
-        tabPanel("Cost Density & Warping Path",
-                 br(),
+        shiny::tabPanel("Cost Density & Warping Path",
+                        shiny::br(),
                  # fixedRow(column(width = 5, HTML("Normalized DTW <b>distance</b>: ")),
                           # column(width = 2, strong(textOutput("normDistII")))),
-                 fixedRow(column(width = 5, HTML("<b>Profile similarity</b>: ")),
-                          column(width = 2, strong(textOutput("simSPII")))),
-                 br(),
-                 fixedRow(column(width = 3, offset = 3, radioButtons("labelHeight", "Units",
+                 shiny::fixedRow(shiny::column(width = 5, shiny::HTML("<b>Profile similarity</b>: ")),
+                                 shiny::column(width = 2, shiny::strong(shiny::textOutput("simSPII")))),
+                 shiny::br(),
+                 shiny::fixedRow(shiny::column(width = 3, offset = 3, shiny::radioButtons("labelHeight", "Units",
                                                          choices = list("Layer #" = FALSE, "Height (cm)" = TRUE),
                                                          selected = FALSE, inline = TRUE)),
-                          column(width = 3, radioButtons("localCost", "Cost",
+                                 shiny::column(width = 3, shiny::radioButtons("localCost", "Cost",
                                                          choices = list("Global" = FALSE, "Local" = TRUE),
                                                          selected = TRUE, inline = TRUE))),
-                 plotOutput("costDensity",  height = "650px")
+                 shiny::plotOutput("costDensity",  height = "650px")
         )
       )
     )
@@ -210,14 +209,14 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
 
    ## ---- initialize reactive profile data ----
     ## dependend on action button or provided input
-    isolate({
-      if (values$providedInput) profiles <- reactiveValues(query = values$query, ref = values$ref)
-      else profiles <- reactiveValues(query = NULL, ref = NULL)
+    shiny::isolate({
+      if (values$providedInput) profiles <- shiny::reactiveValues(query = values$query, ref = values$ref)
+      else profiles <- shiny::reactiveValues(query = NULL, ref = NULL)
     })
 
     ## ---- load profiles upon action button ----
     ## subroutine
-    get_profiles <- eventReactive(input$do, {
+    get_profiles <- shiny::eventReactive(input$do, {
       SPpairs <- sarp.snowprofile::SPpairs
       if (input$source == "3) Human vs modeled") {
         query <- SPpairs$A_modeled
@@ -233,7 +232,7 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
         query <- prfRead[[1]]
         ref <- prfRead[[2]]
       } else {
-        req(input$queryFile, input$refFile)
+        shiny::req(input$queryFile, input$refFile)
         query <- snowprofileCaaml(input$queryFile$datapath)
         ref <- snowprofileCaaml(input$refFile$datapath)
       }
@@ -241,30 +240,30 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
     })
     ## update profiles with subroutine
     ## i.e. workaround to be able to start off with other values written into profiles!
-    observeEvent(get_profiles(), {
+    shiny::observeEvent(get_profiles(), {
       p <- get_profiles()
       profiles$query = p$query
       profiles$ref = p$ref
     })
 
     ## ---- store and update dims and weights ----
-    properties <- reactiveValues()
-    MINdwsize <- reactiveVal(0)
-    observeEvent(
+    properties <- shiny::reactiveValues()
+    MINdwsize <- shiny::reactiveVal(0)
+    shiny::observeEvent(
       c(input$weightSlider, input$weightSlider2, input$ddate),
       priority = 3,
       {
         if (input$ddate) {
           ## check if ddate info available in profiles:
-          if (!"ddate" %in% names(isolate(profiles$query$layers)) |
-              !"ddate" %in% names(isolate(profiles$ref$layers))) {
-            showModal(modalDialog(
+          if (!"ddate" %in% names(shiny::isolate(profiles$query$layers)) |
+              !"ddate" %in% names(shiny::isolate(profiles$ref$layers))) {
+            shiny::showModal(shiny::modalDialog(
               title = "Oooops!",
               "At least one of your profiles doesn't have any deposition date information.",
               easyClose = TRUE
             ))
             ## change input$ddate to wrong and continue with subsequent if clause:
-            updateCheckboxInput(session, "ddate", value = FALSE)
+            shiny::updateCheckboxInput(session, "ddate", value = FALSE)
           } else {
             ## ddate info is available:
             properties$dims = c("gtype", "hardness", "ddate")
@@ -288,8 +287,8 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
 
     ## ---- store and UPDATE alignment ----
     ## update align whenever changes happen:
-    align <- reactiveValues()
-    observeEvent(
+    align <- shiny::reactiveValues()
+    shiny::observeEvent(
 
       ## UPDATE whenever detect changes in:
       c(profiles$ref, profiles$query, properties$weights, input$reverse, input$ddateNorm, input$wsize, input$dwsize,
@@ -298,7 +297,7 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
 
         ## calculate profile alignment:
         ## requires profiles to continue
-        req(profiles$query, profiles$ref)
+          shiny::req(profiles$query, profiles$ref)
         ## 'reverse' UI tick box
         if (input$reverse) profiles <- list(ref = profiles$query, query = profiles$ref)
 
@@ -342,13 +341,13 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
             }, error = function(err) err)
 
             if (inherits(newProfiles, "error")) {
-              showModal(modalDialog(
+              shiny::showModal(shiny::modalDialog(
                 title = "Oha!",
-                HTML(paste0("Can't compute TSA index for your profiles, due to ", newProfiles, ". Reverting to Herla et al (2021) approach.")),
+                shiny::HTML(paste0("Can't compute TSA index for your profiles, due to ", newProfiles, ". Reverting to Herla et al (2021) approach.")),
                 easyClose = TRUE
               ))
               simType <- "HerlaEtAl2021"
-              updateRadioButtons(session, "simType", selected = "Herla et al (2021)")
+              shiny::updateRadioButtons(session, "simType", selected = "Herla et al (2021)")
             } else {
               profiles <- newProfiles
             }
@@ -360,13 +359,13 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
             }, error = function(err) err)
 
             if (inherits(newProfiles, "error")) {
-              showModal(modalDialog(
+              shiny::showModal(shiny::modalDialog(
                 title = "Oha!",
-                HTML(paste0("Can't compute RTA index for your profiles, due to ", newProfiles, ". Reverting to Herla et al (2021) approach.")),
+                shiny::HTML(paste0("Can't compute RTA index for your profiles, due to ", newProfiles, ". Reverting to Herla et al (2021) approach.")),
                 easyClose = TRUE
               ))
               simType <- "HerlaEtAl2021"
-              updateRadioButtons(session, "simType", selected = "Herla et al (2021)")
+              shiny::updateRadioButtons(session, "simType", selected = "Herla et al (2021)")
             } else {
               profiles <- newProfiles
             }
@@ -429,17 +428,17 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
               align$alignment <- alignmentLoop()
             }
             if (WSIZE < 1) {
-              updateSliderInput(session, "wsize", value = WSIZE)
-              showModal(modalDialog(
+              shiny::updateSliderInput(session, "wsize", value = WSIZE)
+              shiny::showModal(shiny::modalDialog(
                 title = "Oha!",
-                HTML(paste0("No warping path available, if you go below a window size of ", WSIZE, "!<br>
+                shiny::HTML(paste0("No warping path available, if you go below a window size of ", WSIZE, "!<br>
                      Check out the cost density to better understand why. <br> Switch between the axis units 'Layer #' and 'Height (cm)' if necessary.")),
                 easyClose = TRUE
               ))
             } else {
-              showModal(modalDialog(
+              shiny::showModal(shiny::modalDialog(
                 title = "Sorry!",
-                HTML(paste0("Something has gone quite wrong and no alignment could be calculated. <br>
+                shiny::HTML(paste0("Something has gone quite wrong and no alignment could be calculated. <br>
                             Try to reverse what you just did and maybe it'll fix it!")),
                 easyClose = TRUE
               ))
@@ -452,9 +451,9 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
     })
 
     ## ---- render alignment figure ----
-    output$alignmentPlot <- renderPlot({
+    output$alignmentPlot <- shiny::renderPlot({
       ## requires alignment to continue:
-      req(align$alignment)
+      shiny::req(align$alignment)
       ## plot:
       label.ddate <- ifelse((input$labelDdate & input$ddate), TRUE, FALSE)
       plotSPalignment(query = NA, ref = NA, dtwAlignment = align$alignment, label.ddate = label.ddate,
@@ -469,9 +468,9 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
     })
 
     ## ---- render density figure ----
-    output$costDensity <- renderPlot({
+    output$costDensity <- shiny::renderPlot({
       ## requires alignment to continue:
-      req(align$alignment)
+      shiny::req(align$alignment)
       ## plot:
       align$alignment$localCostMatrix[is.na(align$alignment$costMatrix)] <- NA
       plotCostDensitySP(align$alignment, localCost = as.logical(input$localCost),
@@ -480,16 +479,16 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
 
     ## ---- render text ----
     ## note: next line's hack is necessary to use that identical output in two different tabs!
-    output$normDist <- output$normDistII <-  renderText({
+    output$normDist <- output$normDistII <-  shiny::renderText({
       ## requires alignment to continue:
-      req(align$alignment)
+      shiny::req(align$alignment)
       ## text:
       paste(formatC(align$alignment$normalizedDistance, format = "f", digits = 3))
     })
 
-    output$simSP <- output$simSPII <- renderText({
+    output$simSP <- output$simSPII <- shiny::renderText({
       ## requires alignment to continue:
-      req(align$alignment)
+      shiny::req(align$alignment)
       ## text:
       paste(formatC(align$alignment$sim,
                     format = "f", digits = 3))
@@ -511,14 +510,14 @@ interactiveAlignment <- function(query = NaN, ref = NaN) {
 
     ## ---- communication between UI and server ----
     ## needed in order to make action button disappear when input profiles are provided
-    output$onInput <- reactive({
+    output$onInput <- shiny::reactive({
       if (values$providedInput) TRUE
       else FALSE
     })
-    outputOptions(output, 'onInput', suspendWhenHidden = FALSE)
+    shiny::outputOptions(output, 'onInput', suspendWhenHidden = FALSE)
   }
 
   ## --- run app ----
-  shinyApp(ui = ui, server = server)
+  shiny::shinyApp(ui = ui, server = server)
 
 }

@@ -18,15 +18,16 @@ citEntry(
 
 citEntry(
   entry    = "Article",
-  title    = "Brief communication: A numerical tool for averaging large data sets of snow stratigraphy profiles useful for avalanche forecasting",
+  title    = "A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting",
   author   = c(
     person(given = "Florian", family = "Herla", role = c("aut", "cre"), email = "fherla@sfu.ca"),
     person(given = "Pascal", family = "Haegeli"),
     person(given = "Patrick", family = "Mair")
     ),
-  journal  = "The Cryosphere Discuss.",
+  journal  = "The Cryosphere",
   year     = "2022",
-  textVersion = paste("Herla, F., Haegeli, P., and Mair, P.: Brief communication: A numerical tool for averaging large data sets of snow stratigraphy profiles useful for avalanche forecasting, The Cryosphere Discuss., https://doi.org/10.5194/tc-2022-29, in review, 2022."
+  textVersion = paste("Herla, F., Haegeli, P., and Mair, P.: A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting, The Cryosphere 16(8), 3149-3162, https://doi.org/10.5194/tc-16-3149-2022, 2022."
   ),
-  doi      = "10.5194/tc-2022-29"
+  doi      = "10.5194/tc-16-3149-2022"
+
 )

@@ -9,7 +9,7 @@
 #' @param query The query snowprofile object
 #' @param ref The ref snowprofile object
 #' @param dims Character vector containing the layer properties to calculate the distance over. Currently implemented
-#' are the properties `hardness`, `gtype`, `ddate`.
+#' are the properties `hardness`, `gtype`, `ddate`, `density`, `ogs`.
 #' @param weights Numeric vector of the same length as `dims` specifying the averaging weights to each element of dims.
 #' @param gtype_distMat A symmetric **distance** scoring matrix provided as data.frame that stores information about
 #' the distances between the encountered grain types of the provided profiles. Default is the corresponding distance
@@ -123,6 +123,26 @@ distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2
       ddateDistance(query$layers$ddate[iMat[,1]],
                     ref$layers$ddate[iMat[,2]],
                     normalizeBy = ddateNorm)
+    tofill <- tofill + 1
+  }
+  if ("density" %in% dims) {
+    iMat[,3] <- tofill
+    distArr[iMat] <-
+      weights[which(dims == "density")] *
+      densityDistance(query$layers$density[iMat[,1]],
+                       ref$layers$density[iMat[,2]],
+                       normalize = TRUE,
+                       absDist = TRUE)
+    tofill <- tofill + 1
+  }
+  if ("ogs" %in% dims) {
+    iMat[,3] <- tofill
+    distArr[iMat] <-
+      weights[which(dims == "ogs")] *
+      densityDistance(query$layers$ogs[iMat[,1]],
+                      ref$layers$ogs[iMat[,2]],
+                      normalize = TRUE,
+                      absDist = TRUE)
     tofill <- tofill + 1
   }
 

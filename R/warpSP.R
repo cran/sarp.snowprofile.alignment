@@ -18,7 +18,9 @@
 #'   - partial top down alignment where entire ref is matched to subsequence of query ("iminTopDown")
 #'
 #' For the other case, warping the ref onto the query, only the equivalent of the first option is implemented.
-
+#'
+#' For developers: Including new variables in the output of warped profiles can easily be done by inserting a respective command
+#' at the end of this function. There are many example variables added already.
 #'
 #' @param alignment DTW alignment object from [dtwSP] containing the two profiles (i.e., called `dtwSP(..., keep.internals = TRUE)`)
 #' @param whom whom to warp? "query" (= "jmin"), "imin", "queryTopDown" (= "jminTopDown"), "iminTopDown", "ref";
@@ -167,13 +169,18 @@ warpSP <- function(alignment, whom = NA) {
   if ("queryWarped" %in% names(alignment)) {
     rownames(alignment$queryWarped$layers) <- seq(nrow(alignment$queryWarped$layers))
     if ("ddate" %in% names(alignment$query$layers)) alignment$queryWarped$layers$ddate <- alignment$query$layers$ddate[alignment$queryWarped$layers$queryLayerIndex]
+    if ("bdate" %in% names(alignment$query$layers)) alignment$queryWarped$layers$bdate <- alignment$query$layers$bdate[alignment$queryWarped$layers$queryLayerIndex]
     if ("gsize" %in% names(alignment$query$layers)) alignment$queryWarped$layers$gsize <- alignment$query$layers$gsize[alignment$queryWarped$layers$queryLayerIndex]
     if ("density" %in% names(alignment$query$layers)) alignment$queryWarped$layers$density <- alignment$query$layers$density[alignment$queryWarped$layers$queryLayerIndex]
+    if ("ogs" %in% names(alignment$query$layers)) alignment$queryWarped$layers$ogs <- alignment$query$layers$ogs[alignment$queryWarped$layers$queryLayerIndex]
     if ("tsa" %in% names(alignment$query$layers)) alignment$queryWarped$layers$tsa <- alignment$query$layers$tsa[alignment$queryWarped$layers$queryLayerIndex]
     if ("tsa_interface" %in% names(alignment$query$layers)) alignment$queryWarped$layers$tsa_interface <- alignment$query$layers$tsa_interface[alignment$queryWarped$layers$queryLayerIndex]
     if ("rta" %in% names(alignment$query$layers)) alignment$queryWarped$layers$rta <- alignment$query$layers$rta[alignment$queryWarped$layers$queryLayerIndex]
     if ("rta_interface" %in% names(alignment$query$layers)) alignment$queryWarped$layers$rta_interface <- alignment$query$layers$rta_interface[alignment$queryWarped$layers$queryLayerIndex]
     if ("layerOfInterest" %in% names(alignment$query$layers)) alignment$queryWarped$layers$layerOfInterest <- alignment$query$layers$layerOfInterest[alignment$queryWarped$layers$queryLayerIndex]
+    if ("scalingFactor" %in% names(alignment$query$layers)) alignment$queryWarped$layers$scalingFactor <- alignment$query$layers$scalingFactor[alignment$queryWarped$layers$queryLayerIndex]
+    if ("p_unstable" %in% names(alignment$query$layers)) alignment$queryWarped$layers$p_unstable <- alignment$query$layers$p_unstable[alignment$queryWarped$layers$queryLayerIndex]
+    if ("slab_rhogs" %in% names(alignment$query$layers)) alignment$queryWarped$layers$slab_rhogs <- alignment$query$layers$slab_rhogs[alignment$queryWarped$layers$queryLayerIndex]
   } else if ("referenceWarped" %in% names(alignment)) {
     rownames(alignment$referenceWarped$layers) <- seq(nrow(alignment$referenceWarped$layers))
   }

@@ -20,7 +20,7 @@
 #' @return This function returns a list of data.frames with the backtracked layers. Each (named) list item corresponds to a specific layer height (cm).
 #'
 #' @examples
-#' ## Not yet included; create avgProfile example object first.
+#' ## See Vignette for examples.
 #'
 #' @author fherla
 #'
@@ -56,7 +56,7 @@ backtrackLayers <- function(avgProfile, layer = NA, profileSet = NULL, layer_uni
   height_list <- lapply(layerID, function(lidx) {
     ## corresponding layers of profile set:
     layerMaps <- avgProfile$backtrackingTable[avgProfile$backtrackingTable$layerID == lidx, ]
-    backtrackedLayers <- do.call("rbind", lapply(seq(nrow(layerMaps)), function(i) {
+    backtrackedLayers <- data.table::rbindlist(lapply(seq(nrow(layerMaps)), function(i) {
       ## Two computation methods
       ## by height of backtracked layers: unsafer, but possible with non-resampled original profileSet
       if (computationByHeight) {
@@ -70,20 +70,20 @@ backtrackLayers <- function(avgProfile, layer = NA, profileSet = NULL, layer_uni
           message("Investigate interactively! Debugging mode started: ")
           browser()
         })
-        cbind(as.data.frame(profileSet[[layerMaps$queryID[i]]][c("station", "datetime", "zone", "elev", "band",
+        cbind(data.table::as.data.table(profileSet[[layerMaps$queryID[i]]][c("station", "datetime", "zone", "elev", "band",
                                                                  "angle", 'aspect', "hs", "station_id", "date")]),  # profile meta data
               profileSet[[layerMaps$queryID[i]]][["layers"]][mostLikelyThisLayer, ])                                # layer details
       } else {
       ## via queryLayerID: super safe, but resampled $set from averageSP necessary!
-        cbind(as.data.frame(profileSet[[layerMaps$queryID[i]]][c("station", "datetime", "zone", "elev", "band",
+        cbind(data.table::as.data.table(profileSet[[layerMaps$queryID[i]]][c("station", "datetime", "zone", "elev", "band",
                                                                  "angle", 'aspect', "hs", "station_id", "date")]),  # profile meta data
               profileSet[[layerMaps$queryID[i]]][["layers"]][layerMaps$queryLayerID[i], ])                          # layer details
       }
 
 
-    }))
+    }), fill = TRUE)
     if (!is.null(condition)) backtrackedLayers <- subset(backtrackedLayers, eval(condition))
-    return(backtrackedLayers)
+    return(as.data.frame(backtrackedLayers))
   })
 
   names(height_list) <- avgProfile$layers$height[layerID]

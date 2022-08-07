@@ -11,6 +11,8 @@
 #' parameters differ from the defaults specified in [dtwSP], which are held very generic, whereas the application in this function
 #' is much more specific to certain requirements and algorithm behavior. For more details, refer to the reference paper.
 #'
+#' Computing the seasonal average profile for an entire season and about 100 grid points (with a max of 150 cm snow depth) takes roughly 60 mins.
+#'
 #' @importFrom stats filter
 #'
 #' @param SPx a [snowprofileSet] that contains all profiles from the region to be averaged at all days of the season for which you want to compute the average profile.
@@ -54,8 +56,8 @@
 #'  Conclusion: If you want to backtrack layers from the seasonal average profile, you *must* `keep.profiles = TRUE`. See examples!
 #'
 #' @author fherla
-#' @references Herla, F., Haegeli, P., and Mair, P.: Brief communication: A numerical tool for averaging large data sets of snow
-#' stratigraphy profiles useful for avalanche forecasting, The Cryosphere Discuss., https://doi.org/10.5194/tc-2022-29, in review, 2022.
+#' @references Herla, F., Haegeli, P., and Mair, P. (2022). A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting,
+#' The Cryosphere, 16(8), 3149–3162, https://doi.org/10.5194/tc-16-3149-2022
 #'
 #' @seealso [dbaSP], [averageSP], [sarp.snowprofile::labelPWL]
 #' @examples
@@ -63,22 +65,39 @@
 #' run_the_examples <- FALSE  # exclude long-running examples
 #' if (run_the_examples) {
 #'
-#' ## compute average seasonal profile for an entire season
-#' ## takes about 60 mins for a region of hundred profiles and max 150 cm snow depth
-#' avgGNP <- averageSPalongSeason(gnp_dataset, keep.profiles = TRUE)
+#' ## compute average timeseries for simplistic example data set 'SPspacetime'
+#' ## first: label weak layers (you can choose your own rules and thresholds!)
+#' SPspacetime <- snowprofileSet(lapply(SPspacetime, function(sp) {
+#'  labelPWL(sp, pwl_gtype = c("SH", "DH", "FC", "FCxr"), threshold_RTA = 0.8)
+#' }))  # label weak layers in each profile of the profile set 'SPspacetime'
+#'
+#' ## second: average along several days
+#' avgTS <- averageSPalongSeason(SPspacetime)
+#'
 #' ## explore resulting object
-#' names(avgGNP)
-#' plot(avgGNP$avgs)  # timeseries figure
-#' lines(avgGNP$meta$date, avgGNP$meta$hs_median)  # add line representing median snow height
-#' plot(avgGNP$sets$`2018-12-08`, SortMethod = "hs")  # plot individual profiles at a given day
+#' names(avgTS)
+#'
+#' # timeseries figure
+#' plot(avgTS$avgs, main = "average time series")
+#' # add line representing median snow height
+#' lines(avgTS$meta$date, avgTS$meta$hs_median)
+#' # add line representing median new snow amounts
+#' lines(avgTS$meta$date, avgTS$meta$hs - avgTS$meta$thicknessPPDF_median, lty = 'dashed')
+#'
+#' # individual profile sets from one day
+#' plot(avgTS$sets[[1]], SortMethod = "hs", main = "individual profiles from first day")
+#'
 #'
 #' ## backtrack individual layers of the average profile...
-#' individualLayers <- backtrackLayers(avgProfile = avgGNP$avgs$`2018-12-08`,
-#'                       profileSet = avgGNP$sets$`2018-12-08`,
-#'                       layer = findPWL(avgGNP$avgs$`2018-12-08`, pwl_gtype = c("SH", "DH"),
-#'                                       pwl_date = "2018-11-23"))
+#' individualLayers <- backtrackLayers(avgProfile = avgTS$avgs[[1]],
+#'                       profileSet = avgTS$sets[[1]],
+#'                       layer = findPWL(avgTS$avgs[[1]], pwl_gtype = c("SH", "DH"),
+#'                                       pwl_date = "2018-10-17", threshold_RTA = 0.8))
 #' ## ... to retrieve summary statistics or distributions, e.g. stability distribution
-#' hist(individualLayers$rta)
+#' hist(individualLayers[[1]]$rta)
+#' hist(individualLayers[[1]]$depth)
+#'
+#' ## see the Vignette about averaging profiles for more examples!
 #'
 #'
 #' }
@@ -248,13 +267,21 @@ averageSPalongSeason <- function(SPx,
           }
           nLF <- length(layerwiseFactor)
           notNALF <- which(!is.na(layerwiseFactor) & !is.infinite(layerwiseFactor))  # all indices from layerwiseFactor that are not NA
-          layerwiseFactor[seq(max(notNALF)+1, nLF)] <- layerwiseFactor[max(notNALF)]  # replace all upper end NAs with the last non-NA value
-          layerwiseFactor[seq(1, min(notNALF)-1)] <- layerwiseFactor[min(notNALF)]  # replace all lower end NAs with the first non-NA value
-          if (all(layerwiseFactor >= 1)) k_scaleDeeper_start <- 1
-          else k_scaleDeeper_start <- max(which(layerwiseFactor[1:max(which(layerwiseFactor > 1))] < 1))
-          #  note about previous line k_scaleDeeper_start:
-          #  find the largest index of values smaller than 1, but first exclude all values smaller than 1 which are located at the end of the vector,
-          #  because they lead to too few layers being rescaled, which requires negative scaling factors, which in turn breaks the snowprofileLayers object.
+          if (length(notNALF) < 1) {
+            layerwiseFactor[] <- 1  # if all layerwiseFactor is NA --> set all to 1
+          } else {
+            layerwiseFactor[seq(max(notNALF)+1, nLF)] <- layerwiseFactor[max(notNALF)]  # replace all upper end NAs with the last non-NA value
+            layerwiseFactor[seq(1, min(notNALF)-1)] <- layerwiseFactor[min(notNALF)]  # replace all lower end NAs with the first non-NA value
+          }
+          if (all(layerwiseFactor >= 1) | all(layerwiseFactor < 1)) {
+            k_scaleDeeper_start <- 1
+          } else {
+            k_scaleDeeper_start <- max(which(layerwiseFactor[1:max(which(layerwiseFactor > 1))] < 1), 1)
+            #  note about previous line k_scaleDeeper_start:
+            #  find the largest index of values smaller than 1, but first exclude all values smaller than 1 which are located at the end of the vector,
+            #  because they lead to too few layers being rescaled, which requires negative scaling factors, which in turn breaks the snowprofileLayers object.
+            #  Additionally, offer 1 as an alternative to max function to prevent infinite results.
+          }
           k_scaleDeeper <- k_scaleDeeper_start:nLF  ## these layers will be scaled to lower heights
 
           ## compute static (scalar) fac(tor) that rescales to correct medianHS by altering k_scaleDeeper layers
@@ -264,18 +291,19 @@ averageSPalongSeason <- function(SPx,
             correction_iteration_nr <- 1
             mod_layerwiseFactor <- layerwiseFactor[1:max(which(layerwiseFactor > 1))]
             while (fac < 0.2) {
-              sign_layerwiseFactor <- mod_layerwiseFactor - 1
-              ## with each iteration, include more layers into the rescaling so that fac grows larger
-              mod_layerwiseFactor <- mod_layerwiseFactor[1:max(which(sign(sign_layerwiseFactor) == sign(-1*sign_layerwiseFactor[length(sign_layerwiseFactor)])))]
-              k_scaleDeeper_start <- max(which(mod_layerwiseFactor < 1))
-              k_scaleDeeper <- k_scaleDeeper_start:nLF
-              fac <- min(1 + (dev4medianHS/sum(tmp$avg$layers$thickness[k_scaleDeeper])), 1)
+              fac <- tryCatch({
+                sign_layerwiseFactor <- mod_layerwiseFactor - 1
+                ## with each iteration, include more layers into the rescaling so that fac grows larger
+                mod_layerwiseFactor <- suppressWarnings(mod_layerwiseFactor[1:max(which(sign(sign_layerwiseFactor) == sign(-1*sign_layerwiseFactor[length(sign_layerwiseFactor)])))])
+                k_scaleDeeper_start <- suppressWarnings(max(which(mod_layerwiseFactor < 1)))
+                k_scaleDeeper <- k_scaleDeeper_start:nLF
+                min(1 + (dev4medianHS/sum(tmp$avg$layers$thickness[k_scaleDeeper])), 1)
+              }, error = function(err) err)
 
               correction_iteration_nr <- correction_iteration_nr + 1
-              if (correction_iteration_nr > 11) {
-                warning(paste0("This data set leads to a difficult rescaling situation, which would break the snowprofileLayers object.
-                    Can't correctly rescale to median snow height at day ", days[i], ".
-                    Make sure to compare the median snow height to the height of the time series."))
+              if (correction_iteration_nr > 11 | inherits(fac, "error")) {
+                warning(paste0("Can't correctly rescale to median snow height at day ", days[i],
+                ". Make sure to compare the median snow height to the height of the time series."))
                 fac <- 0.2
                 break}}}  # while loop: scaling factor correction
 

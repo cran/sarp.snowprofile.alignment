@@ -7,6 +7,14 @@
 #' so that weak layers be labeled according to these properties by [sarp.snowprofile::labelPWL].
 #' For more details, refer to the reference paper.
 #'
+#' Technical note: Since the layer characteristics of the average profile represent the median characteristics of the individual profiles, it can happen that ddates of the
+#' averaged layers are not in a monotonical order. That is, of course unphysical, but we specifically decided not to override these values to highlight these slight inconsistencies
+#' to users, so that they can decide how to deal with them. As a consequence, the function [sarp.snowprofile::deriveDatetag] does not work for these average profiles with ddate
+#' inconsistencies, but throws an error. The suggested workaround for this issue is to apply that function to all individual profiles *before* computing the average profile. This
+#' ensures that bdates or datetags are also included in the average profile.
+#'
+#' For developers: Including new variables into the averaging/dba routines can be done easily by following commit #9f9e6f9
+#'
 #'
 #' @describeIn averageSP convenient wrapper function
 #' @param SPx SPx a [snowprofileSet] object. Note that the profile layers need to contain a column
@@ -26,6 +34,7 @@
 #' Meaningful range is between `[0.1, 0.5]`. Values larger than 0.5 get set to 0.5.
 #' @param breakAtSim stop iterations when [simSP] between the last average profiles is beyond that value. Can range between `[0, 1]`. Default values differ between [dbaSP] and [averageSP].
 #' @param breakAfter integer specifying how many values of simSP need to be above `breakAtSim` to stop iterating. Default values differ between [dbaSP] and [averageSP].
+#' @param tz timezone of profiles; necessary for assigning the correct timezone to the average profile's ddate/bdate. Either `'auto'` or a timezone known to `[as.POSIXct]`.
 #' @param ... alignment configurations which are passed on to [dbaSP] and then further to [dtwSP]. Note, that you can't provide `rescale2refHS`, which is always set to FALSE. If you wish to rescale
 #' the profiles, read the description of the `SPx` parameter and the examples.
 #' @return A list of class `avgSP` that contains the fields
@@ -33,11 +42,25 @@
 #'   * `$avg`: the resulting average profile
 #'   * `$set`: the corresponding resampled profiles of the group
 #'   * `$call`: (only with `averageSP`) the function call
-#'   * `$prelabeledPWLs`: (only with `averageSP`) boolean scalar whether PWLs (or any other layers of interest) were prelabeled before this routine (`TRUE`) or labeled by this routine (`FALSE`)
+#'   * `$prelabeledPWLs`: (only with `averageSP`) boolean scalar whether PWLs (or any other layers of interest) were prelabeled before this routine (`TRUE`) or
+#'   labeled by this routine with the defaults specified in `classifyPWLs` (`FALSE`)
+#'
+#' The profile layers of the average profile refer to the median properties of the predominant layers. For example, if you labeled all SH/DH layers as your 'layersOfInterest',
+#' and you find a SH or DH layer in the average profile, then it means that the predominant grain type is SH/DH (i.e., more profiles than specified in `proportionPWL` have that layer)
+#' and layer properties like hardness, p_unstable, etc refer to the median properties of these SH/DH layers. If you find a RG layer in your average profile, it means that most
+#' profiles have that RG layer and the layer properties refer to the median properties of all these RG layers. There are two exceptions to this rule, one for `height`/`depth`, and one
+#' for layer properties with the ending `_all`, such as `ppu_all`:
+#'
+#'  - `height` and `depth` provide the vertical grid of the average profile, and for algorithmic reasons, this grid is not always equal to the actual median height or depth
+#'  of the predominant layers. To account for that, two layer columns exist called `medianPredominantHeight` and `medianPredominantDepth`.
+#'  - Properties ending with `_all`: For example, while `ppu` refers to the proportion of profiles, whose *predominant* layers are unstable (i.e., `p_unstable` >= 0.77),
+#'  `ppu_all` refers to the the proportion of profiles, whose layers are unstable while taking into account *all* individual layers matched to this average layer
+#'  (i.e., despite grain type, etc).
+#'  - Other layer properties specific to the average profile: `distribution` ranges between `[0, 1]` and specifies the proportion of profiles that contain the predominant layer described in the other properties.
 #'
 #' @author fherla
-#' @references Herla, F., Haegeli, P., and Mair, P.: Brief communication: A numerical tool for averaging large data sets of snow
-#' stratigraphy profiles useful for avalanche forecasting, The Cryosphere Discuss., https://doi.org/10.5194/tc-2022-29, in review, 2022.
+#' @references Herla, F., Haegeli, P., and Mair, P. (2022). A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting,
+#' The Cryosphere, 16(8), 3149–3162, https://doi.org/10.5194/tc-16-3149-2022
 #'
 #' @seealso [averageSPalongSeason]
 #'
@@ -62,15 +85,31 @@
 #'   par(opar)
 #'
 #'
-#'   ## compute the average profile of the demo object 'SPgroup'
+#' ## compute the average profile of the demo object 'SPgroup'
 #' ## * by labeling SH/DH/FC/FCxr layers with an RTA threshold of 0.65 as weak layers,
 #' ## * otherwise as above
 #'
-#'   SPx <- snowprofileSet(lapply(SPgroup, computeRTA))
+#'   SPx <- computeRTA(SPgroup)
 #'   avgList <- averageSP(SPx, n = 3,
 #'                        classifyPWLs = list(pwl_gtype = c("SH", "DH", "FC", "FCxr"),
 #'                                            threshold_RTA = 0.65),
 #'                        classifyCRs = NULL)
+#'
+#'   opar <- par(mfrow = c(1, 2))
+#'   plot(avgList$avg, ymax = max(summary(avgList$set)$hs))
+#'   plot(avgList$set, SortMethod = "unsorted", xticklabels = "originalIndices")
+#'   par(opar)
+#'
+#' ## compute the average profile of the other demo object 'SPgroup2', which
+#' ## contains more stability indices, such as SK38 or p_unstable
+#' ## * by labeling SH/DH/FC/FCxr layers that either
+#' ##   - have an SK38 below 0.95, *or*
+#' ##   - have a p_unstable above 0.77
+#'
+#'   SPx <- snowprofileSet(SPgroup2)
+#'   avgList <- averageSP(SPx,
+#'                        classifyPWLs = list(pwl_gtype = c("SH", "DH", "FC", "FCxr"),
+#'                                            threshold_SK38 = 0.95, threshold_PU = 0.77))
 #'
 #'   opar <- par(mfrow = c(1, 2))
 #'   plot(avgList$avg, ymax = max(summary(avgList$set)$hs))
@@ -88,14 +127,19 @@ averageSP <- function(SPx, n = 5, sm = summary(SPx),
                       classifyCRs = list(pwl_gtype = c("MFcr", "IF", "IFsc", "IFrc")),
                       proportionPWL = 0.5,
                       breakAtSim = 0.9, breakAfter = 2, verbose = FALSE,
-                      ...) {
+                      tz = "auto", ...) {
 
   if (!is.snowprofileSet(SPx)) stop("SPx must be a snowprofileSet")
+  if (tz == "auto") {
+    tzfac <- factor(sapply(SPx, function(p) attr(p$datetime, "tzone")))
+    tz <- levels(tzfac)[median(as.numeric(tzfac))]
+    if (tz %in% c("NULL", "NA", NA)) tz <- ""
+  }
 
   ## if the layer objects from SPx do not contain the column '$labeledPWL', label weak layers with the provided argument list
   prelabeledPWLs <- TRUE
   if (!all(sapply(SPx, function(sp) "layerOfInterest" %in% names(sp$layers)))) {
-    message("Weak layers not pre-labeled. Automatic labeling based on arguments in classifyPWLs.")
+    message("Weak layers not pre-labeled for averageSP. Automatic labeling based on arguments in classifyPWLs.")
     SPx <- snowprofileSet(lapply(SPx, function(sp) do.call("labelPWL", c(quote(sp), classifyPWLs))))
     prelabeledPWLs <- FALSE
   }
@@ -123,7 +167,7 @@ averageSP <- function(SPx, n = 5, sm = summary(SPx),
             sm = sm,
             proportionPWL = proportionPWL,
             breakAtSim = breakAtSim, breakAfter = breakAfter,
-            verbose = verbose, ...)
+            verbose = verbose, tz = tz, ...)
     },
     error = function(err) {
       warning(paste0("Error in averaging of profiles:\n ", err))

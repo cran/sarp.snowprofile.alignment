@@ -28,7 +28,8 @@
 dbaSP <- function(SPx, Avg, sm = summary(SPx),
                   resamplingRate = 0.5, proportionPWL = 0.3,
                   maxiter = 10, breakAtSim = 0.99, breakAfter = 1,
-                  plotChanges = FALSE, verbose = TRUE, ...) {
+                  plotChanges = FALSE, verbose = TRUE,
+                  tz = "auto", ...) {
 
 
 #   ____________________________________________________________________________________________________________________
@@ -39,6 +40,12 @@ dbaSP <- function(SPx, Avg, sm = summary(SPx),
   nSP <- length(SPx)
   avgs <- list()
   sim <- double(length = maxiter)
+
+  if (tz == "auto") {
+    tzfac <- factor(sapply(SPx, function(p) attr(p$datetime, "tzone")))
+    tz <- levels(tzfac)[median(as.numeric(tzfac))]
+    if (tz %in% c("NULL", "NA", NA)) tz <- ""
+  }
 
   ## set simType for calculation of sim between iterative avgs
   dots <- list(...)
@@ -66,9 +73,9 @@ dbaSP <- function(SPx, Avg, sm = summary(SPx),
   getWarpedLayers <- function(sp, Avg) {
 
     ## use matrices for easy allocation/subsetting; one matrix per data type
-    DFchar <- matrix(as.character(NA), nrow = rowz, ncol = 3, dimnames = list(seq(rowz), c("station_id", "gtype", "ddate")))
+    DFchar <- matrix(as.character(NA), nrow = rowz, ncol = 4, dimnames = list(seq(rowz), c("station_id", "gtype", "ddate", "bdate")))
     DFnum_colnames <- c("height", "AvgLayerIndex", "thickness", "hardness", "gsize", "density", "tsa", "rta",
-                        "queryLayerIndex", "queryLayerHeight", "queryLayerDepth", "sim", "layerOfInterest")
+                        "queryLayerIndex", "queryLayerHeight", "queryLayerDepth", "sim", "layerOfInterest", "p_unstable", "slab_rhogs")
     DFnum <- matrix(as.double(NA), nrow = rowz, ncol = length(DFnum_colnames),
                     dimnames = list(seq(rowz), DFnum_colnames))
 
@@ -92,10 +99,13 @@ dbaSP <- function(SPx, Avg, sm = summary(SPx),
     DFchar[k_insert_to, "station_id"] <- rep(as.character(sp$station_id), times = length(k_insert_to))
     DFchar[k_insert_to, "gtype"] <- as.character(warpedLayers$gtype)[k_insert_from]
     if ("ddate" %in% names(warpedLayers)) DFchar[k_insert_to, "ddate"] <- as.character(warpedLayers$ddate[k_insert_from])
+    if ("bdate" %in% names(warpedLayers)) DFchar[k_insert_to, "bdate"] <- as.character(warpedLayers$bdate[k_insert_from])
     if ("gsize" %in% names(warpedLayers)) DFnum[k_insert_to, "gsize"] <- warpedLayers$gsize[k_insert_from]
     if ("density" %in% names(warpedLayers)) DFnum[k_insert_to, "density"] <- warpedLayers$density[k_insert_from]
     if ("tsa" %in% names(warpedLayers)) DFnum[k_insert_to, "tsa"] <- warpedLayers$tsa[k_insert_from]
     if ("rta" %in% names(warpedLayers)) DFnum[k_insert_to, "rta"] <- warpedLayers$rta[k_insert_from]
+    if ("p_unstable" %in% names(warpedLayers)) DFnum[k_insert_to, "p_unstable"] <- warpedLayers$p_unstable[k_insert_from]
+    if ("slab_rhogs" %in% names(warpedLayers)) DFnum[k_insert_to, "slab_rhogs"] <- warpedLayers$slab_rhogs[k_insert_from]
 
     return(data.frame(DFnum, DFchar))
   }
@@ -138,11 +148,16 @@ dbaSP <- function(SPx, Avg, sm = summary(SPx),
       gtype_mode,                                                                            # gtype
       as.character(round(nrow(DFsubset) / nSP, digits = 2)),                                 # distribution
       as.character(round(median(as.double(DFsubset$hardness), na.rm = TRUE), digits = 2)),   # hardness
-      as.character(median(as.POSIXct(DFsubset$ddate), na.rm = TRUE)),                        # ddate
+      as.character(median(as.POSIXct(DFsubset$ddate, tz = tz), na.rm = TRUE)),               # ddate
+      as.character(median(as.POSIXct(DFsubset$bdate, tz = tz), na.rm = TRUE)),               # bdate
       as.character(round(median(as.double(DFsubset$gsize), na.rm = TRUE), digits = 2)),      # gsize
       as.character(round(median(as.double(DFsubset$density), na.rm = TRUE), digits = 2)),    # density
       as.character(round(median(as.double(DFsubset$tsa), na.rm = TRUE), digits = 2)),        # tsa
-      as.character(round(median(as.double(DFsubset$rta), na.rm = TRUE), digits = 2))         # rta
+      as.character(round(median(as.double(DFsubset$rta), na.rm = TRUE), digits = 2)),        # rta
+      as.character(round(median(as.double(DFsubset$p_unstable), na.rm = TRUE), digits = 2)), # p_unstable
+      as.character(round(median(as.double(DFsubset$slab_rhogs), na.rm = TRUE), digits = 2)), # slab_rhogs
+      as.character(round(length(which(DFsubset$p_unstable >= 0.77))/nrow(DFsubset), digits = 2)),  # ppu
+      as.character(round(length(which(DF[DF$height == lyr, "p_unstable"] >= 0.77))/nrow(DF[DF$height == lyr, ]), digits = 2))  # ppu_all
     ), nrow = 1)
 
   }
@@ -169,7 +184,7 @@ dbaSP <- function(SPx, Avg, sm = summary(SPx),
     ## get the grain type frequencies for each layer &
     ## compute median over layer properties that correspond to the most prevalent grain type
     cnames <- c("medianPredominantHeight", "medianPredominantDepth", "gtype", "distribution", "hardness",
-                "ddate", "gsize", "density", "tsa", "rta")
+                "ddate", "bdate", "gsize", "density", "tsa", "rta", "p_unstable", "slab_rhogs", "ppu", "ppu_all")
     avgLyrs <- lapply(DFgrid, averageOverLayers, DF = DF)
     avgLyrs <- as.data.frame(do.call("rbind", avgLyrs))
     colnames(avgLyrs) <- cnames
@@ -194,15 +209,21 @@ dbaSP <- function(SPx, Avg, sm = summary(SPx),
 
     if (length(drop) > 0) {
       Avg <- suppressWarnings(snowprofile(type = "aggregate", layers = snowprofileLayers(height = DFgrid[-drop], gtype = avgLyrs$gtype[-drop], hardness = as.double(avgLyrs$hardness[-drop]),
-                                                                        ddate = as.POSIXct(avgLyrs$ddate[-drop]), gsize = as.double(avgLyrs$gsize[-drop]), density = as.double(avgLyrs$density[-drop]),
+                                                                        ddate = as.POSIXct(avgLyrs$ddate[-drop], tz = tz), bdate = as.POSIXct(avgLyrs$bdate[-drop], tz = tz),
+                                                                        gsize = as.double(avgLyrs$gsize[-drop]), density = as.double(avgLyrs$density[-drop]),
                                                                         tsa = as.double(avgLyrs$tsa[-drop]), rta = as.double(avgLyrs$rta[-drop]),
+                                                                        p_unstable = as.double(avgLyrs$p_unstable[-drop]), slab_rhogs = as.double(avgLyrs$slab_rhogs[-drop]),
+                                                                        ppu = as.double(avgLyrs$ppu[-drop]), ppu_all = as.double(avgLyrs$ppu_all[-drop]),
                                                                         distribution = as.double(avgLyrs$distribution[-drop]), medianPredominantHeight = as.double(avgLyrs$medianPredominantHeight[-drop]),
                                                                         medianPredominantDepth = as.double(avgLyrs$medianPredominantDepth[-drop])))
       )  # suppressWarnings due to un-defined layer property 'distribution'
     } else {
       Avg <- suppressWarnings(snowprofile(type = "aggregate", layers = snowprofileLayers(height = DFgrid, gtype = avgLyrs$gtype, hardness = as.double(avgLyrs$hardness),
-                                                                                         ddate = as.POSIXct(avgLyrs$ddate), gsize = as.double(avgLyrs$gsize), density = as.double(avgLyrs$density),
+                                                                                         ddate = as.POSIXct(avgLyrs$ddate, tz = tz), bdate = as.POSIXct(avgLyrs$bdate, tz = tz),
+                                                                                         gsize = as.double(avgLyrs$gsize), density = as.double(avgLyrs$density),
                                                                                          tsa = as.double(avgLyrs$tsa), rta = as.double(avgLyrs$rta),
+                                                                                         p_unstable = as.double(avgLyrs$p_unstable), slab_rhogs = as.double(avgLyrs$slab_rhogs),
+                                                                                         ppu = as.double(avgLyrs$ppu), ppu_all = as.double(avgLyrs$ppu_all),
                                                                                          distribution = as.double(avgLyrs$distribution), medianPredominantHeight = as.double(avgLyrs$medianPredominantHeight),
                                                                                          medianPredominantDepth = as.double(avgLyrs$medianPredominantDepth)))
       )

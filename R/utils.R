@@ -8,7 +8,51 @@
 ## fherla
 ##
 
+## --- Difference in layer density ----
+#' Difference in layer density
+#'
+#' Calculate the difference (i.e. distance) in layer density
+#'
+#' @param density1 numeric density values (1D array)
+#' @param density2 numeric density values (1D array)
+#' @param normalize Should result be normalized? boolean, default False.
+#' @param absDist Interested in absolute distance? default True.
+#' @return numeric density distance
+#' @author pbillecocq
+densityDistance <- function(density1, density2, normalize=FALSE, absDist=TRUE) {
 
+  ## assertions necessary (e.g., type, value ranges, etc)?
+
+  ## Calculate the difference between density arrays
+  densitydist <- density1 - density2
+  if (absDist) densitydist <- abs(densitydist)
+  if (normalize) densitydist <- densitydist / max(densitydist)
+
+  return(densitydist)
+}
+
+## --- Difference in layer Optical Grain Size (ogs) ----
+#' Difference in layer ogs
+#'
+#' Calculate the difference (i.e. distance) in layer ogs
+#'
+#' @param ogs1 numeric ogs values (1D array)
+#' @param ogs2 numeric ogs values (1D array)
+#' @param normalize Should result be normalized? boolean, default False.
+#' @param absDist Interested in absolute distance? default True.
+#' @return numeric ogs distance
+#' @author pbillecocq
+ogsDistance <- function(ogs1, ogs2, normalize=FALSE, absDist=TRUE) {
+
+  ## assertions necessary (e.g., type, value ranges, etc)?
+
+  ## Calculate the difference between ogs arrays
+  ogsdist <- ogs1 - ogs2
+  if (absDist) ogsdist <- abs(ogsdist)
+  if (normalize) ogsdist <- ogsdist / max(ogsdist)
+
+  return(ogsdist)
+}
 
 ## --- Difference in Hand Hardness ----
 #' Difference in Hand Hardness

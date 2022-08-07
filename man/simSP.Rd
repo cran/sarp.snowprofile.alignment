@@ -31,6 +31,7 @@ Possible choices
 \item \code{HerlaEtAl2021} (= \code{simple2})
 \item \code{tsa_WLdetection} & \code{rta_WLdetection}
 \item \code{layerwise} & \code{rta_scaling}
+\item \code{remotesensing}
 }}
 
 \item{nonMatchedSim}{sets the similarity value of non-matched layers \verb{[0, 1]}. "indifference" = 0.5, penalty < 0.5.
@@ -65,7 +66,7 @@ The similarity measure is compatible with top-down alignments and is symmetric w
 see Details below.}
 }
 \details{
-The first several implementation types (\strong{simple}, \strong{HerlaEtAl2021}, \strong{tsa_WLdetection}, \strong{rta_WLdetection}) represent different flavours of the approach detailed in
+The first several implementation types (\strong{simple}, \strong{HerlaEtAl2021}, \strong{tsa_WLdetection}, \strong{rta_WLdetection}) represent different flavors of the approach detailed in
 Herla et al (2021). In essence, they are a simple approach to incorporate avalanche hazard relevant characteristics into the score by
 computing the score as arithmetic mean of 4 different grain type classes:
 \itemize{
@@ -83,7 +84,7 @@ depth ranges (i.e., Surface--30cm depth--80cm depth--150cm depth--Ground). It is
 type, which computes as many numbers of equidistant vertical windows as number of wl or cr are present in the profile.
 
 Type \strong{tsa_WLdetection} employs a similar approach as \emph{simple}, but it identifies weak layers (wl) based on the Threshold Sum Approach
-(>= 5 TSA, lemons, german 'Nieten'). Therefore, the original profiles need to contain grain size information, which allows you to pre-compute the lemons
+(>= 5 TSA, lemons, German 'Nieten'). Therefore, the original profiles need to contain grain size information, which allows you to pre-compute the lemons
 for all layers (additionally to the otherwise
 necessary gain type and hardness information). It is thus more targeted to simulated profiles or detailed manual profiles of very high quality.
 While the former two types neglect hardness information of wl and cr classes, this type does not.
@@ -98,6 +99,8 @@ contributes equally to the overall similarity measure. It is, however, very flex
 where the denominator ensures that the resulting score will be within \verb{[0, 1]}. If you want to explore your own scaling approach,
 both input snow profiles need to contain a column called \verb{$layers$scalingFactor} that store the desired factor.
 Type \strong{rta_scaling} is a special case of \code{layerwise}, where the scaling is determined by the relative lemons of each layer (RTA, see Monti et al 2013).
+Type \strong{remotesensing} makes use of the layerwise algorithm, but triggers an alternative similarity computation beforehand. Similarity is first computed from density and Optical Grain Size (ogs),
+and then the layerwise similarity is called upon to compute the global sim score.
 
 \strong{NOTE} that for all types that include TSA/RTA values, these values need to be computed \emph{prior to aligning} the profiles
 (and therefore need to be present in the profiles provided to this function!)

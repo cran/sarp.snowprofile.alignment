@@ -50,6 +50,7 @@
 #' @param nonMatchedThickness How strongly should the thicknesses of non-matched layers influence the resulting similarity of
 #' the profiles? The smaller this (positive!) value, the more influence; and vice versa. See [simSP] for more details.
 #' @param simType the similarity between two profiles can be computed with different approaches, see [simSP]
+#' @param apply_scalingFactor Setting for [simSP] in case `simType == "layerwise`.
 #' @param ... Arguments passed to \code{\link{distMatSP}}, and \code{\link{dtw}} e.g.
 #'
 #'   * `dims`, `weights` (defaults specified in \code{\link{distMatSP}})
@@ -99,7 +100,7 @@
 dtwSP <- function(query, ref, open.end = TRUE, checkGlobalAlignment = 'auto', keep.internals = TRUE,
                   step.pattern = symmetricP1, resamplingRate = 0.5, rescale2refHS = FALSE,
                   bottom.up = TRUE, top.down = TRUE,
-                  nonMatchedSim = 0, nonMatchedThickness = 10, simType = "HerlaEtAl2021", ...) {
+                  nonMatchedSim = 0, nonMatchedThickness = 10, simType = "HerlaEtAl2021", apply_scalingFactor = FALSE, ...) {
 
   ## --- assertion, setup etc ----
   if (!is.snowprofile(query) | !is.snowprofile(ref)) stop("query and ref need to be two snowprofile objects.")
@@ -282,13 +283,13 @@ dtwSP <- function(query, ref, open.end = TRUE, checkGlobalAlignment = 'auto', ke
     sim <- rep(NA, times = ndirs)
     for (i in seq_along(dirs)) {
       A[[i]]["sim"] <- sim[i] <-  simSP(RES$ref, A[[i]]$queryWarped, gtype_distMat = gtDM,
-                                        nonMatchedSim = nonMatchedSim, nonMatchedThickness = nonMatchedThickness, type = simType)
+                                        nonMatchedSim = nonMatchedSim, nonMatchedThickness = nonMatchedThickness, type = simType, apply_scalingFactor = apply_scalingFactor)
     }
     win <- which.max(sim)
   } else {
     win <- 1
     A[[win]]["sim"] <- simSP(RES$ref, A[[win]]$queryWarped, gtype_distMat = gtDM,
-                             nonMatchedSim = nonMatchedSim, nonMatchedThickness = nonMatchedThickness, type = simType)
+                             nonMatchedSim = nonMatchedSim, nonMatchedThickness = nonMatchedThickness, type = simType, apply_scalingFactor = apply_scalingFactor)
   }
 
   ## modify local cost matrix to resemble step pattern constraints:

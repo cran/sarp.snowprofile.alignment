@@ -6,10 +6,10 @@
 \alias{sarp.snowprofile.alignment-package}
 \title{sarp.snowprofile.alignment: Snow Profile Alignment, Aggregation, and Clustering}
 \description{
-Snow profiles describe the vertical (1D) stratigraphy of layered snow with different layer characteristics, such as grain type, hardness, deposition date, and many more. Hence, they represent a data format similar to multivariate time series containing categorical, ordinal, and numerical data types. Use this package to align snow profiles by matching their individual layers based on Dynamic Time Warping (DTW). The aligned profiles can then be assessed with an independent, global similarity measure that is geared towards avalanche hazard assessment. Finally, through exploiting data aggregation and clustering methods, the similarity measure provides the foundation for grouping and summarizing snow profiles according to similar hazard conditions. In particular, this package allows for averaging large numbers of snow profiles with DTW Barycenter Averaging and thereby facilitates the computation of individual layer distributions and summary statistics that are relevant for avalanche forecasting purposes. For more background information refer to Herla, Horton, Mair, and Haegeli (2021) <doi:10.5194/gmd-14-239-2021>, and Herla, Mair, and Haegeli (2022, in review) <doi:10.5194/tc-2022-29>.
+Snow profiles describe the vertical (1D) stratigraphy of layered snow with different layer characteristics, such as grain type, hardness, deposition date, and many more. Hence, they represent a data format similar to multivariate time series containing categorical, ordinal, and numerical data types. Use this package to align snow profiles by matching their individual layers based on Dynamic Time Warping (DTW). The aligned profiles can then be assessed with an independent, global similarity measure that is geared towards avalanche hazard assessment. Finally, through exploiting data aggregation and clustering methods, the similarity measure provides the foundation for grouping and summarizing snow profiles according to similar hazard conditions. In particular, this package allows for averaging large numbers of snow profiles with DTW Barycenter Averaging and thereby facilitates the computation of individual layer distributions and summary statistics that are relevant for avalanche forecasting purposes. For more background information refer to Herla, Horton, Mair, and Haegeli (2021) <doi:10.5194/gmd-14-239-2021>, and Herla, Mair, and Haegeli (2022) <doi:10.5194/tc-16-3149-2022>.
 }
 \seealso{
-\link{SPpairs}, \link{dtwSP}, \link{medoidSP}
+\link{SPpairs}, \link{dtwSP}, \link{averageSP}
 }
 \author{
 \strong{Maintainer}: Florian Herla \email{fherla@sfu.ca}
@@ -18,6 +18,7 @@ Authors:
 \itemize{
   \item Pascal Haegeli \email{pascal_haegeli@sfu.ca}
   \item Simon Horton \email{shorton@sfu.ca}
+  \item Paul Billecocq \email{paul.billecocq@usherbrooke.ca}
 }
 
 Other contributors:

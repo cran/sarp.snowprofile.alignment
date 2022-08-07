@@ -37,6 +37,9 @@ The 4 options for warping the query onto the ref are:
 }
 
 For the other case, warping the ref onto the query, only the equivalent of the first option is implemented.
+
+For developers: Including new variables in the output of warped profiles can easily be done by inserting a respective command
+at the end of this function. There are many example variables added already.
 }
 \examples{
 
