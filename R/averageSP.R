@@ -121,7 +121,7 @@
 #'
 #' @export
 averageSP <- function(SPx, n = 5, sm = summary(SPx),
-                      progressbar = require("progress", quietly = TRUE, character.only = TRUE),
+                      progressbar = requireNamespace("progress", quietly = TRUE),
                       progressbar_pretext = NULL,
                       classifyPWLs = list(pwl_gtype = c("SH", "DH")),
                       classifyCRs = list(pwl_gtype = c("MFcr", "IF", "IFsc", "IFrc")),

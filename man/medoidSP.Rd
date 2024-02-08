@@ -11,7 +11,7 @@ medoidSP(
   distmat = NULL,
   verbose = FALSE,
   resamplingRate = 0.5,
-  progressbar = require("progress", quietly = TRUE, character.only = TRUE),
+  progressbar = requireNamespace("progress", quietly = TRUE),
   ...
 )
 }

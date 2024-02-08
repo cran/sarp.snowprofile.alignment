@@ -9,7 +9,7 @@ averageSP(
   SPx,
   n = 5,
   sm = summary(SPx),
-  progressbar = require("progress", quietly = TRUE, character.only = TRUE),
+  progressbar = requireNamespace("progress", quietly = TRUE),
   progressbar_pretext = NULL,
   classifyPWLs = list(pwl_gtype = c("SH", "DH")),
   classifyCRs = list(pwl_gtype = c("MFcr", "IF", "IFsc", "IFrc")),
@@ -122,11 +122,11 @@ For developers: Including new variables into the averaging/dba routines can be d
 }
 \section{Functions}{
 \itemize{
-\item \code{averageSP}: convenient wrapper function
+\item \code{averageSP()}: convenient wrapper function
 
-\item \code{dbaSP}: DTW barycenter averaging of snow profiles (low level worker function)
+\item \code{dbaSP()}: DTW barycenter averaging of snow profiles (low level worker function)
+
 }}
-
 \examples{
 ## EXAMPLES OF averageSP
 this_example_runs_about_10s <- TRUE

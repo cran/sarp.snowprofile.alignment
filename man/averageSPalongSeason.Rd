@@ -10,7 +10,7 @@ averageSPalongSeason(
   AvgDayBefore = NULL,
   DateEnd = max(sm$date),
   keep.profiles = TRUE,
-  progressbar = require("progress", quietly = TRUE, character.only = TRUE),
+  progressbar = requireNamespace("progress", quietly = TRUE),
   dailyRescaling = c("settleTopOldSnow", "settleEntireOldSnow")[1],
   proportionPWL = 0.3,
   breakAtSim = 0.9,

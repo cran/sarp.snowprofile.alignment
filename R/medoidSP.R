@@ -46,8 +46,14 @@
 #' }
 #' @export
 
-medoidSP <- function(profileList = NULL, rescale_resample = TRUE, retDistmat = FALSE, distmat = NULL, verbose = FALSE,
-                     resamplingRate = 0.5, progressbar = require("progress", quietly = TRUE, character.only = TRUE), ...) {
+medoidSP <- function(profileList = NULL,
+                     rescale_resample = TRUE,
+                     retDistmat = FALSE,
+                     distmat = NULL,
+                     verbose = FALSE,
+                     resamplingRate = 0.5,
+                     progressbar = requireNamespace("progress", quietly = TRUE),
+                     ...) {
 
 
   ## compute distance matrix from profileList:

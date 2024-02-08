@@ -108,7 +108,7 @@ averageSPalongSeason <- function(SPx,
                                  AvgDayBefore = NULL,
                                  DateEnd = max(sm$date),
                                  keep.profiles = TRUE,
-                                 progressbar = require("progress", quietly = TRUE, character.only = TRUE),
+                                 progressbar = requireNamespace("progress", quietly = TRUE),
                                  dailyRescaling = c("settleTopOldSnow", "settleEntireOldSnow")[1],
                                  proportionPWL = 0.3, breakAtSim = 0.9, breakAfter = 2, verbose = FALSE, resamplingRate = 0.5,
                                  top.down = FALSE, checkGlobalAlignment = FALSE, prefLayerWeights = NA,
@@ -138,8 +138,11 @@ averageSPalongSeason <- function(SPx,
   ## days along season
   days <- sort(unique(sm$date[sm$date >= day & sm$date <= DateEnd]))
   if (length(days) == 0) {
-    if (day > DateEnd) stop("DateEnd is earlier than AvgDayBefore$date!")
-    else stop("There seem to be no dates in your provided data set that satisfy your time window!")
+    if (day > DateEnd) {
+      stop("DateEnd is earlier than AvgDayBefore$date!")
+    } else {
+      stop("There seem to be no dates in your provided data set that satisfy your time window!")
+    }
   }
   ## ensure profile sampling not more often than daily
   if (!all(sapply(sm$station_id, function(stid) {
@@ -147,8 +150,13 @@ averageSPalongSeason <- function(SPx,
   }))) stop("Profiles are sampled more often than once per day! Only daily sampling supported.")
   ## check if profiles exist for each of the days and
   ## (1) discard missing days, (2) discard days with medianHS below resamplingRate
-  days <- days[sapply(days, function(dy) length(sm$date[sm$date == dy]) > 0 & medianHSatDate[unique(sm$date) == dy] > 2*resamplingRate)]
-  day <- days[1]
+  days <- unique(c(day, days[sapply(days, function(dy) length(sm$date[sm$date == dy]) > 0 & medianHSatDate[unique(sm$date) == dy] > 2*resamplingRate)]))
+  if (initialize) {
+    day <- days[1]
+  } else {
+    day <- days[2]
+  }
+
 
   ## initialize object for average time series
   RES <- vector("list", length(days))
@@ -217,7 +225,7 @@ averageSPalongSeason <- function(SPx,
       tmp <- dbaSP(SPx[sm$date == days[i]], Avg = RES[[i-1]]$avg, sm = sm[sm$date == days[i], ], keep.profiles = TRUE,
                    proportionPWL = proportionPWL, breakAtSim = breakAtSim, breakAfter = breakAfter, verbose = verbose, resamplingRate = resamplingRate,
                    top.down = top.down, checkGlobalAlignment = checkGlobalAlignment, prefLayerWeights = prefLayerWeights,
-                   dims = c("gtype", "hardness", "ddate"), weights = c(0.375, 0.125, 0.5), ...)
+                   dims = dims, weights = weights, ...)
       tmp$avg$date <- days[i]
       tmp$avg$reinitialized <- FALSE
       ## ensure continuity of ddates:
@@ -276,7 +284,9 @@ averageSPalongSeason <- function(SPx,
           if (all(layerwiseFactor >= 1) | all(layerwiseFactor < 1)) {
             k_scaleDeeper_start <- 1
           } else {
-            k_scaleDeeper_start <- max(which(layerwiseFactor[1:max(which(layerwiseFactor > 1))] < 1), 1)
+            largestIDXleq1 <- suppressWarnings(max(which(layerwiseFactor > 1)))
+            if (is.infinite(largestIDXleq1)) largestIDXleq1 <- max(which(layerwiseFactor >= 1))
+            k_scaleDeeper_start <- max(which(layerwiseFactor[1:largestIDXleq1] < 1), 1)
             #  note about previous line k_scaleDeeper_start:
             #  find the largest index of values smaller than 1, but first exclude all values smaller than 1 which are located at the end of the vector,
             #  because they lead to too few layers being rescaled, which requires negative scaling factors, which in turn breaks the snowprofileLayers object.
@@ -289,7 +299,7 @@ averageSPalongSeason <- function(SPx,
           ## correct scaling factors that would break snowprofileLayers object (i.e., fac is too small):
           if (fac < 0.2) {
             correction_iteration_nr <- 1
-            mod_layerwiseFactor <- layerwiseFactor[1:max(which(layerwiseFactor > 1))]
+            mod_layerwiseFactor <- layerwiseFactor[1:min(max(which(layerwiseFactor > 1)), length(layerwiseFactor))]
             while (fac < 0.2) {
               fac <- tryCatch({
                 sign_layerwiseFactor <- mod_layerwiseFactor - 1
@@ -344,6 +354,9 @@ averageSPalongSeason <- function(SPx,
   }  # END LOOP over each day
 
   ##--- Format output ----
+  if (!initialize){
+    RES <- RES[2:length(RES)]
+  }
   avgs <- lapply(RES, function(res) res$avg)
   avgs <- snowprofileSet(avgs)
   sets <- lapply(RES, function(res) res$set)

@@ -1,3 +1,9 @@
+# sarp.snowprofile.alignment 1.2.2
+
+  - Fixed a seldom bug in the `averageSPalongSeason` rescaling routine that would cause the function to fail without recovery
+  - Make `averageSPalongSeason` more user-friendly wrt providing precomputed averages as initial condition
+  - Add `concat_avgSP_timeseries` to combine two return objects from `averageSPalongSeason` where one holds the season history and the other holds the recent average. This is useful if the routine is applied in an operational setting where the average timeseries is update day-by-day.
+
 # sarp.snowprofile.alignment 1.2.1
 
   - Added the vignette *Averaging of profiles and retrieval of distributions*

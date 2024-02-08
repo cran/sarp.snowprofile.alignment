@@ -172,6 +172,7 @@ warpSP <- function(alignment, whom = NA) {
     if ("bdate" %in% names(alignment$query$layers)) alignment$queryWarped$layers$bdate <- alignment$query$layers$bdate[alignment$queryWarped$layers$queryLayerIndex]
     if ("gsize" %in% names(alignment$query$layers)) alignment$queryWarped$layers$gsize <- alignment$query$layers$gsize[alignment$queryWarped$layers$queryLayerIndex]
     if ("density" %in% names(alignment$query$layers)) alignment$queryWarped$layers$density <- alignment$query$layers$density[alignment$queryWarped$layers$queryLayerIndex]
+    if ("temperature" %in% names(alignment$query$layers)) alignment$queryWarped$layers$temperature <- alignment$query$layers$temperature[alignment$queryWarped$layers$queryLayerIndex]
     if ("ogs" %in% names(alignment$query$layers)) alignment$queryWarped$layers$ogs <- alignment$query$layers$ogs[alignment$queryWarped$layers$queryLayerIndex]
     if ("tsa" %in% names(alignment$query$layers)) alignment$queryWarped$layers$tsa <- alignment$query$layers$tsa[alignment$queryWarped$layers$queryLayerIndex]
     if ("tsa_interface" %in% names(alignment$query$layers)) alignment$queryWarped$layers$tsa_interface <- alignment$query$layers$tsa_interface[alignment$queryWarped$layers$queryLayerIndex]
