@@ -35,7 +35,7 @@ The individual steps of aligning snow profiles---taken from the documentation of
   2. **Resample** the profiles onto the same depth grid. 2 different approaches:
       - regular grid with a sampling rate that is provided by the user (recommended, cf., `resampleSP`).  
       - irregular grid that includes all layer interfaces within the two profiles (i.e., set `resamplingRate = NA`) (cf., `resampleSPpairs`). This approach handles the profiles with minimum layer storage, but leads to skewed profile alignments since the algorithm cannot keep track of different layer thicknesses.
-  3. Compute a weighted **local cost matrix** from multiple layer characteristics (cf., `distMatSP`)
+  3. Compute a weighted **local cost matrix** from multiple layer characteristics (cf., `distanceSPlayers`)
   4. **Match the layers** of the profiles with a call to `dtw` (eponymous R package)
   5. Align the profiles by **warping** the query profile onto the reference profile (cf., `warpSP`)
   6. (optional) If the function has been called with multiple different boundary conditions (global, top-down, or bottom-up alignments),
@@ -60,7 +60,7 @@ A series of functions exist that manipulate the snow profiles prior to the align
 
 ### 1.2 Computing a weighted local cost matrix from multiple layer characteristics
 
-Computing a local cost matrix is fundamental to DTW alignments and is carried out in `distMatSP`.
+Computing a local cost matrix is fundamental to DTW alignments and is carried out in `distanceSPlayers`.
 
  1. **Assessing the differences of individual snow layers**
  Currently, distance functions are implemented for the layer characteristics *grain type, hardness, and deposition date*. The distance function 
@@ -73,7 +73,7 @@ Computing a local cost matrix is fundamental to DTW alignments and is carried ou
   2. **Computing a local cost matrix**  
   First, a distance matrix is computed for each included layer characteristic that stores the distances between individual layer combinations. Then these distance matrices are combined into one resulting distance matrix (i.e., local cost matrix) by weighted averaging. Optionally, a preferential layer matching manipulation can be included into the local cost matrix.
   
-In `distMatSP` all parameters related to the local cost matrix can be controlled, e.g.
+In `distanceSPlayers` all parameters related to the local cost matrix can be controlled, e.g.
   
   - Layer characteristics to include
   - Relative averaging weights of the layer characteristics

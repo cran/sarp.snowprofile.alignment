@@ -9,7 +9,7 @@
 #' @param query The query snowprofile object
 #' @param ref The ref snowprofile object
 #' @param dims Character vector containing the layer properties to calculate the distance over. Currently implemented
-#' are the properties `hardness`, `gtype`, `ddate`, `density`, `ogs`.
+#' are the properties `hardness`, `gtype`, `ddate`, `density`, `ogs`, `p_unstable`.
 #' @param weights Numeric vector of the same length as `dims` specifying the averaging weights to each element of dims.
 #' @param gtype_distMat A symmetric **distance** scoring matrix provided as data.frame that stores information about
 #' the distances between the encountered grain types of the provided profiles. Default is the corresponding distance
@@ -38,33 +38,33 @@
 #' @examples
 #'
 #' ## call function with two snow profiles of unequal lengths, without using a window function:
-#' dMat_noWindow <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA)
+#' dMat_noWindow <- distanceSPlayers(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA)
 #' graphics::image(dMat_noWindow, main = "Default distance matrix without a warping window")
 #'
 #'
 #' ## compute distance based on grain type alone,
 #' ## and additionally disable preferential layer matching:
-#' dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA,
-#'                   dims = "gtype", weights = 1, prefLayerWeights = NA)
+#' dMat <- distanceSPlayers(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA,
+#'                          dims = "gtype", weights = 1, prefLayerWeights = NA)
 #' graphics::image(dMat,
 #'                 main = "Only based on grain type, and without preferential layer matching")
 #'
 #' ## enable preferential layer matching:
-#' dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA)
+#' dMat <- distanceSPlayers(SPpairs$A_modeled, SPpairs$A_manual, windowFunction = NA)
 #' graphics::image(dMat,
 #'                 main = "... with preferential layer matching")
 #'
 #'
 #' ## using a warping window:
-#' dMat <- distMatSP(SPpairs$A_modeled, SPpairs$A_manual, window.size.abs = 50)
+#' dMat <- distanceSPlayers(SPpairs$A_modeled, SPpairs$A_manual, window.size.abs = 50)
 #' graphics::image(dMat, main = "... and superimposing an absolute warping window of 50 cm")
 #'
 #' @export
-distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2, 0.8),
-                                 gtype_distMat = sim2dist(grainSimilarity_align(FALSE)),
-                                 prefLayerWeights = layerWeightingMat(FALSE),
-                                 ddateNorm = 5, windowFunction = warpWindowSP,
-                                 top.down.mirroring = FALSE, warn.if.na.in.distance.calc = FALSE, ...) {
+distanceSPlayers <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2, 0.8),
+                             gtype_distMat = sim2dist(grainSimilarity_align(FALSE)),
+                             prefLayerWeights = layerWeightingMat(FALSE),
+                             ddateNorm = 5, windowFunction = warpWindowSP,
+                             top.down.mirroring = FALSE, warn.if.na.in.distance.calc = FALSE, ...) {
 
   ## --- Assertions and Initializations ----
   if (!is.snowprofile(query) | !is.snowprofile(ref)) stop("Both query and ref need to be snowprofile objects!")
@@ -104,16 +104,16 @@ distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2
     distArr[iMat] <-
       weights[which(dims == "gtype")] *
       extractFromScoringMatrix(ScoringFrame = gtype_distMat,
-                               grainType1 = as.character(query$layers$gtype)[iMat[,1]],
-                               grainType2 = as.character(ref$layers$gtype)[iMat[,2]])
+                               grainType1 = query$layers$gtype[iMat[,1]],
+                               grainType2 = ref$layers$gtype[iMat[,2]])
     tofill <- tofill + 1
 
     ## fill layer weighting matrix
     if (!all(is.na(prefLayerWeights))) {
       lwmat[iMat[, 1:2]] <-
         extractFromScoringMatrix(ScoringFrame = prefLayerWeights,
-                                 grainType1 = as.character(query$layers$gtype)[iMat[,1]],
-                                 grainType2 = as.character(ref$layers$gtype)[iMat[,2]])
+                                 grainType1 = query$layers$gtype[iMat[,1]],
+                                 grainType2 = ref$layers$gtype[iMat[,2]])
     }
   }
   if ("ddate" %in% dims) {
@@ -143,6 +143,14 @@ distMatSP <- function(query, ref, dims = c("hardness", "gtype"), weights = c(0.2
                       ref$layers$ogs[iMat[,2]],
                       normalize = TRUE,
                       absDist = TRUE)
+    tofill <- tofill + 1
+  }
+  if ("p_unstable" %in% dims) {
+    iMat[,3] <- tofill
+    distArr[iMat] <-
+      weights[which(dims == "p_unstable")] *
+      puDistance(query$layers$p_unstable[iMat[,1]],
+                 ref$layers$p_unstable[iMat[,2]])
     tofill <- tofill + 1
   }
 

@@ -42,7 +42,7 @@ plotSPalignment(
 
 \item{plot.warpedQuery}{plot warped query additionally to query, ref and alignment segments? (i.e. three pane plot) boolean, default = TRUE}
 
-\item{label.ddate}{Label deposition date in profiles? (Only possible if \code{ddate} is given in 'dims', cf \link{distMatSP})}
+\item{label.ddate}{Label deposition date in profiles? (Only possible if \code{ddate} is given in 'dims', cf \link{distanceSPlayers})}
 
 \item{segCol}{Color of alignment segments. Passed to \link{gpar}, default = "gray70"}
 
@@ -66,15 +66,15 @@ default FALSE i.e. one segment line per (synthetic) layer interface -> supports 
 
 \item{mainQwarped}{subtitle for warped query subfigure}
 
-\item{emphasizeLayers_qu}{emphasize Layers in query, see \link{plot.snowprofile}}
+\item{emphasizeLayers_qu}{emphasize Layers in query, see \link[sarp.snowprofile:plot.snowprofile]{sarp.snowprofile::plot.snowprofile}}
 
-\item{emphasizeLayers_ref}{emphasize Layers in reference, see \link{plot.snowprofile}}
+\item{emphasizeLayers_ref}{emphasize Layers in reference, see \link[sarp.snowprofile:plot.snowprofile]{sarp.snowprofile::plot.snowprofile}}
 
-\item{failureLayers_qu}{draw arrow to failure layers (see \link{plot.snowprofile})? provide height vector.}
+\item{failureLayers_qu}{draw arrow to failure layers (see \link[sarp.snowprofile:plot.snowprofile]{sarp.snowprofile::plot.snowprofile})? provide height vector.}
 
-\item{failureLayers_qu_col}{color of arrow(s) (individual color string or vector, see \link{plot.snowprofile})}
+\item{failureLayers_qu_col}{color of arrow(s) (individual color string or vector, see \link[sarp.snowprofile:plot.snowprofile]{sarp.snowprofile::plot.snowprofile})}
 
-\item{...}{Arguments passed to \code{\link{distMatSP}} and \code{\link{dtwSP}}}
+\item{...}{Arguments passed to \code{\link{distanceSPlayers}} and \code{\link{dtwSP}}}
 }
 \value{
 dtw object with the resampled '$query' and '$reference', as well as the warped query '$queryWarped'

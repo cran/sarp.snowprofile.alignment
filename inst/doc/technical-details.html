@@ -374,7 +374,7 @@ minimum layer storage, but leads to skewed profile alignments since the
 algorithm cannot keep track of different layer thicknesses.</li>
 </ul></li>
 <li>Compute a weighted <strong>local cost matrix</strong> from multiple
-layer characteristics (cf., <code>distMatSP</code>)</li>
+layer characteristics (cf., <code>distanceSPlayers</code>)</li>
 <li><strong>Match the layers</strong> of the profiles with a call to
 <code>dtw</code> (eponymous R package)</li>
 <li>Align the profiles by <strong>warping</strong> the query profile
@@ -414,7 +414,7 @@ another)</li>
 <h3>1.2 Computing a weighted local cost matrix from multiple layer
 characteristics</h3>
 <p>Computing a local cost matrix is fundamental to DTW alignments and is
-carried out in <code>distMatSP</code>.</p>
+carried out in <code>distanceSPlayers</code>.</p>
 <ol style="list-style-type: decimal">
 <li><p><strong>Assessing the differences of individual snow
 layers</strong> Currently, distance functions are implemented for the
@@ -437,8 +437,8 @@ resulting distance matrix (i.e., local cost matrix) by weighted
 averaging. Optionally, a preferential layer matching manipulation can be
 included into the local cost matrix.</p></li>
 </ol>
-<p>In <code>distMatSP</code> all parameters related to the local cost
-matrix can be controlled, e.g.</p>
+<p>In <code>distanceSPlayers</code> all parameters related to the local
+cost matrix can be controlled, e.g.</p>
 <ul>
 <li>Layer characteristics to include</li>
 <li>Relative averaging weights of the layer characteristics</li>

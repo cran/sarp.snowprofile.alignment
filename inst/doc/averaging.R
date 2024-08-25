@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -23,10 +23,10 @@ plot(SPgroup2, SortMethod = 'hs', xticklabels = 'originalIndices', ylim = c(0, 1
 par(mar = c(5.1, 2.1, 2.1, 1.1))
 plot(avgSP$avg, main = "average profile", ymax = 150)
 
-## ---- echo=FALSE--------------------------------------------------------------
+## ----echo=FALSE---------------------------------------------------------------
 knitr::include_graphics("figures/averageSPdistributions.png")
 
-## ---- echo=TRUE, eval=TRUE, fig.asp=0.5, dpi = 300----------------------------
+## ----echo=TRUE, eval=TRUE, fig.asp=0.5, dpi = 300-----------------------------
 ## identify layer of interest: we need its row index
 deepestSH_index <- min(findPWL(avgSP$avg, pwl_gtype = "SH"))  # this is the deepest SH of the profile, in our specific case exactly what we want
 ## alternatively, you can (additionally) query for its date, 
@@ -40,13 +40,13 @@ str(backtrackedlayers)
 ## the backtrackedLayers object is a list of data frames, one data frame for each averaged layer (in our case 1); 
 ## list elements are named by the height (cm) of the averaged layer
 
-## ---- fig.asp=0.3, dpi = 300--------------------------------------------------
+## ----fig.asp=0.3, dpi = 300---------------------------------------------------
 ## compute whatever distribution you're interested: e.g., depth histogram
 par(cex = 0.3)
 hist(backtrackedlayers[[1]]$depth, 
      main = "Depth distribution of deepest SH layer", xlab = "Depth (cm)")
 
-## ---- echo=TRUE, eval=TRUE----------------------------------------------------
+## ----echo=TRUE, eval=TRUE-----------------------------------------------------
 ## backtrack all layers by not providing a row index
 backtrackedlayers <- backtrackLayers(avgSP$avg, profileSet = avgSP$set)
 
@@ -60,7 +60,7 @@ poor <- sapply(backtrackedlayers, function(bti) {
   sum(bti$rta >= 0.8)/ length(bti$rta)
   })  # proportion of layers poor stability
 
-## ---- echo=TRUE, eval=TRUE, fig.asp=0.7, dpi = 300----------------------------
+## ----echo=TRUE, eval=TRUE, fig.asp=0.7, dpi = 300-----------------------------
 ## visualize profile
 layout(matrix(c(2, 1), 1, 2, byrow = TRUE), c(1.2, 1.8))
 par(mar = c(9.1, 0, 2.1, 2.1), bg = "transparent", cex = 0.3)
@@ -101,7 +101,7 @@ SPspacetime <- snowprofileSet(lapply(SPspacetime, function(sp) {
 ## average along several days
 avgSP <- averageSPalongSeason(SPspacetime)
 
-## ---- dpi=300, fig.asp=0.7----------------------------------------------------
+## ----dpi=300, fig.asp=0.7-----------------------------------------------------
 ## explore the average timeseries object:
 names(avgSP)
 avgSP$call
@@ -113,7 +113,7 @@ plot(avgSP$avgs, main = "Timeseries of average profile with median HS and median
 lines(avgSP$meta$date, avgSP$meta$hs_median)
 lines(avgSP$meta$date, avgSP$meta$hs - avgSP$meta$thicknessPPDF_median, lty = "dashed")
 
-## ---- fig.asp=0.7, dpi = 300--------------------------------------------------
+## ----fig.asp=0.7, dpi = 300---------------------------------------------------
 ## brief helper function for median vertical locations of specific layers (i.e., height or depth)
 medianVLOC <- function(avgObj, pwldate, vloc = "Depth", pwlgt = c("SH", "DH"), date_range_earl = -5, draw = TRUE) {
   mvl <- unname(do.call("c", lapply(avgObj$avgs, function(avg) {
@@ -133,7 +133,7 @@ plot(avgSP$avgs, main = "Time series with median depth of middle Nov 22 DH layer
 ## ... and apply above function to the Nov 22 weak layer
 medianDepth_NOV22 <- medianVLOC(avgSP, "2018-11-23", vloc = "Depth")
 
-## ---- fig.asp=0.7, dpi=300----------------------------------------------------
+## ----fig.asp=0.7, dpi=300-----------------------------------------------------
 ## rename the variable ppu_all to 'percentage' for subsequent plotting
 avgSP$avgs <- snowprofileSet(lapply(avgSP$avgs, function(avg) {
   avg$layers$percentage <- avg$layers$ppu_all

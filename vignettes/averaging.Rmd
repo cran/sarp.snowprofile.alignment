@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 
 This vignette creates a link between the methods described in the paper 
 ```
-Herla, F., Haegeli, P., and Mair, P.: A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting, The Cryosphere, https://doi.org/10.5194/tc-2022-29, accepted.
+Herla, F., Haegeli, P., and Mair, P.: A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting, The Cryosphere, 16, 3149–3162, https://doi.org/10.5194/tc-16-3149-2022, 2022.
 ```
 and this companion R package. While the basic workflow of matching layers between pairs of snow stratigraphy profiles and thereby aligning them is described in the vignette **Basic workflow**, this vignette describes how larger groups of profiles can be aggregated into a representative summary profile (*average profile*) and how underlying distributions of layer or profile properties can be queried through the average profile. 
 

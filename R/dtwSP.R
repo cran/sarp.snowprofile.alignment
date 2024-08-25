@@ -11,8 +11,8 @@
 #'  2. **Resample** the profiles onto the same depth grid. 2 different approaches:
 #'      - regular grid with a sampling rate that is provided by the user (recommended, cf., [resampleSP]).
 #'      - irregular grid that includes all layer interfaces within the two profiles (i.e., set `resamplingRate = 'irregularInterfaces'`) (cf., [resampleSPpairs])
-#'  3. Compute a weighted **local cost matrix** from multiple layer characteristics (cf., [distMatSP])
-#'  4. **Match the layers** of the profiles with a call to [dtw] (eponymous R package)
+#'  3. Compute a weighted **local cost matrix** from multiple layer characteristics (cf., [distanceSPlayers])
+#'  4. **Match the layers** of the profiles with a call to [dtw::dtw] (eponymous R package)
 #'  5. Align the profiles by **warping** the query profile onto the reference profile (cf., [warpSP])
 #'  6. (optional) If the function has been called with multiple different boundary conditions (global, top-down, or bottom-up alignments),
 #'  the optimal alignment as determined by [simSP] or by the DTW distance will be returned.
@@ -46,19 +46,20 @@
 #' @param rescale2refHS Rescale the query snow height to match the ref snow height?
 #' @param bottom.up Compute an open.end alignment from the ground upwards?
 #' @param top.down Compute an open.end alignment from the snow surface downwards?
-#' @param nonMatchedSim Similarity value `[0, 1]` for non-matched layers, see [simSP]. indifference = 0.5, penalty < 0.5
-#' @param nonMatchedThickness How strongly should the thicknesses of non-matched layers influence the resulting similarity of
-#' the profiles? The smaller this (positive!) value, the more influence; and vice versa. See [simSP] for more details.
 #' @param simType the similarity between two profiles can be computed with different approaches, see [simSP]
-#' @param apply_scalingFactor Setting for [simSP] in case `simType == "layerwise`.
-#' @param ... Arguments passed to \code{\link{distMatSP}}, and \code{\link{dtw}} e.g.
+#' @param ... Arguments passed to [distanceSPlayers], and [dtw::dtw], and [simSP] e.g.
 #'
-#'   * `dims`, `weights` (defaults specified in \code{\link{distMatSP}})
-#'   * `ddateNorm`, numeric, normalize deposition date (default specified in \code{\link{distMatSP}})
+#'   * `dims`, `weights` (defaults specified in \code{\link{distanceSPlayers}})
+#'   * `ddateNorm`, numeric, normalize deposition date (default specified in \code{\link{distanceSPlayers}})
 #'   * `windowFunction`, default \code{\link{warpWindowSP}}
 #'   * `window.size`, `window.size.abs`, `ddate.window.size` (defaults specified in \code{\link{warpWindowSP}})
-#'   * `gtype_distMat`, (default specified in \code{\link{distMatSP}}), cf. e.g. [grainSimilarity_align]
+#'   * `gtype_distMat`, specific to profile alignment, see [distanceSPlayers]
+#'   * `gtype_distMat_simSP`, specific to similarity measure in [simSP]
 #'   * `prefLayerWeights`, weighting matrix for preferential layer matching, e.g. [layerWeightingMat]
+#'   * `nonMatchedSim` Similarity value `[0, 1]` for non-matched layers, see [simSP]. indifference = 0.5, penalty < 0.5
+#'   * `nonMatchedThickness` How strongly should the thicknesses of non-matched layers influence the resulting similarity of
+#' the profiles? The smaller this (positive!) value, the more influence; and vice versa. See [simSP] for more details.
+#'   * `apply_scalingFactor` Setting for [simSP] in case `simType` is `"layerwise"` or `"wsum_scaled"`.
 #' @md
 #'
 #' @return
@@ -99,8 +100,8 @@
 #' @export
 dtwSP <- function(query, ref, open.end = TRUE, checkGlobalAlignment = 'auto', keep.internals = TRUE,
                   step.pattern = symmetricP1, resamplingRate = 0.5, rescale2refHS = FALSE,
-                  bottom.up = TRUE, top.down = TRUE,
-                  nonMatchedSim = 0, nonMatchedThickness = 10, simType = "HerlaEtAl2021", apply_scalingFactor = FALSE, ...) {
+                  bottom.up = TRUE, top.down = TRUE, simType = "HerlaEtAl2021",
+                  ...) {
 
   ## --- assertion, setup etc ----
   if (!is.snowprofile(query) | !is.snowprofile(ref)) stop("query and ref need to be two snowprofile objects.")
@@ -145,14 +146,14 @@ dtwSP <- function(query, ref, open.end = TRUE, checkGlobalAlignment = 'auto', ke
 
   ## --- calculate dtw alignment ----
   DMat <- array(dim = c(nL_q, nL_r, ndirs))
-  DMat[,,1] <- distMatSP(RES$query, RES$ref, ...)
+  DMat[,,1] <- distanceSPlayers(RES$query, RES$ref, ...)
   if (top.down) {
     if (nL_q == nL_r) {
       ## mirror matrix at top-left/bottom-right diagonal:
       ## (saves resources to rearrange DMat, but incorrect warping window for uneven number of layers)
       DMat[,, which(dirs == "topDown")] <- apply(apply(DMat[,,1], 1, rev), 1, rev)
     } else {
-      DMat[,, which(dirs == "topDown")] <- distMatSP(RES$query, RES$ref, top.down.mirroring = TRUE, ...)
+      DMat[,, which(dirs == "topDown")] <- distanceSPlayers(RES$query, RES$ref, top.down.mirroring = TRUE, ...)
     }
   }
   if (checkGlobalAlignment) DMat[,, which(dirs == "globalAlignment")] <- DMat[,,1]
@@ -278,18 +279,15 @@ dtwSP <- function(query, ref, open.end = TRUE, checkGlobalAlignment = 'auto', ke
   }  # END LOOP
 
   ## choose whether bottomUp / TopDown / globalAlignment performed better (based on external function call simSP):
-  gtDM <- sim2dist(grainSimilarity_evaluate(FALSE))
   if (ndirs > 1) {
     sim <- rep(NA, times = ndirs)
     for (i in seq_along(dirs)) {
-      A[[i]]["sim"] <- sim[i] <-  simSP(RES$ref, A[[i]]$queryWarped, gtype_distMat = gtDM,
-                                        nonMatchedSim = nonMatchedSim, nonMatchedThickness = nonMatchedThickness, type = simType, apply_scalingFactor = apply_scalingFactor)
+      A[[i]]["sim"] <- sim[i] <-  simSP(RES$ref, A[[i]]$queryWarped, ...)
     }
     win <- which.max(sim)
   } else {
     win <- 1
-    A[[win]]["sim"] <- simSP(RES$ref, A[[win]]$queryWarped, gtype_distMat = gtDM,
-                             nonMatchedSim = nonMatchedSim, nonMatchedThickness = nonMatchedThickness, type = simType, apply_scalingFactor = apply_scalingFactor)
+    A[[win]]["sim"] <- simSP(RES$ref, A[[win]]$queryWarped, ...)
   }
 
   ## modify local cost matrix to resemble step pattern constraints:

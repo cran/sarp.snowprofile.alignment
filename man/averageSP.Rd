@@ -18,6 +18,7 @@ averageSP(
   breakAfter = 2,
   verbose = FALSE,
   tz = "auto",
+  n_cores = NULL,
   ...
 )
 
@@ -37,7 +38,7 @@ dbaSP(
 )
 }
 \arguments{
-\item{SPx}{SPx a \link{snowprofileSet} object. Note that the profile layers need to contain a column
+\item{SPx}{SPx a \link[sarp.snowprofile:snowprofileSet]{sarp.snowprofile::snowprofileSet} object. Note that the profile layers need to contain a column
 called \verb{$layerOfInterest} which classifies weak layers. While \link{averageSP} will label weak layers automatically if not done by the user beforehand, \link{dbaSP} won't do that but fail instead!;
 consider thinking about how you want to label weak layers, see Description, \code{classifyPWLs} below, and the references.
 Also note, that if you wish to average the \emph{rescaled} profile set, do so manually before calling this function (see examples).}
@@ -68,10 +69,12 @@ Meaningful range is between \verb{[0.1, 0.5]}. Values larger than 0.5 get set to
 
 \item{tz}{timezone of profiles; necessary for assigning the correct timezone to the average profile's ddate/bdate. Either \code{'auto'} or a timezone known to \verb{[as.POSIXct]}.}
 
+\item{n_cores}{number of nodes to create for a cluster using the  parallel package to speed up calculations (default = NULL)}
+
 \item{...}{alignment configurations which are passed on to \link{dbaSP} and then further to \link{dtwSP}. Note, that you can't provide \code{rescale2refHS}, which is always set to FALSE. If you wish to rescale
 the profiles, read the description of the \code{SPx} parameter and the examples.}
 
-\item{Avg}{the initial average snow profile: either a \link{snowprofile} object or an index to an initial average profile in SPx}
+\item{Avg}{the initial average snow profile: either a \link[sarp.snowprofile:snowprofile]{sarp.snowprofile::snowprofile} object or an index to an initial average profile in SPx}
 
 \item{resamplingRate}{Resampling rate for a regular depth grid among the profiles}
 
@@ -113,7 +116,7 @@ For more details, refer to the reference paper.
 }
 \details{
 Technical note: Since the layer characteristics of the average profile represent the median characteristics of the individual profiles, it can happen that ddates of the
-averaged layers are not in a monotonical order. That is, of course unphysical, but we specifically decided not to override these values to highlight these slight inconsistencies
+averaged layers are not in a monotonic order. That is, of course non-physical, but we specifically decided not to override these values to highlight these slight inconsistencies
 to users, so that they can decide how to deal with them. As a consequence, the function \link[sarp.snowprofile:deriveDatetag]{sarp.snowprofile::deriveDatetag} does not work for these average profiles with ddate
 inconsistencies, but throws an error. The suggested workaround for this issue is to apply that function to all individual profiles \emph{before} computing the average profile. This
 ensures that bdates or datetags are also included in the average profile.

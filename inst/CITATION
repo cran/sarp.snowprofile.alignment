@@ -30,5 +30,19 @@ c(
     textVersion = paste("Herla, F., Haegeli, P., and Mair, P.: A data exploration tool for averaging and accessing large data sets of snow stratigraphy profiles useful for avalanche forecasting, The Cryosphere 16(8), 3149-3162, https://doi.org/10.5194/tc-16-3149-2022, 2022."
     ),
     doi      = "10.5194/tc-16-3149-2022"
+  ),
+
+  bibentry(
+    bibtype = "Article",
+    title    = "Clustering simulated snow profiles to form avalanche forecast regions",
+    author   = c(
+      person(given = "Simon", family = "Horton", email = "shorton@avalanche.ca"),
+      person(given = "Florian", family = "Herla"),
+      person(given = "Pascal", family = "Haegeli")
+    ),
+    journal  = "EGUsphere [preprint]",
+    year     = "2024",
+    textVersion = paste("Horton, S., Herla, F., and Haegeli, P.: Clustering simulated snow profiles to form avalanche forecast regions, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2024-1609, 2024."),
+    doi      = "10.5194/egusphere-2024-1609"
   )
 )

@@ -44,7 +44,7 @@ warpWindowSP(
 \item{ddate.window.size}{number of days that exclude layers from the warping window if their deposition dates
 differ by more than these days}
 
-\item{...}{unused---but important to be able to provide other warping functions to \link{distMatSP}}
+\item{...}{unused---but important to be able to provide other warping functions to \link{distanceSPlayers}}
 }
 \description{
 Given a matrix, this function sets all elements of the matrix that are outside the so-called warping

@@ -14,7 +14,7 @@ chooseICavg(
 )
 }
 \arguments{
-\item{set}{a \link{snowprofileSet}}
+\item{set}{a \link[sarp.snowprofile:snowprofileSet]{sarp.snowprofile::snowprofileSet}}
 
 \item{n}{number of profile indices to be picked (i.e., returned)}
 
@@ -37,7 +37,7 @@ for how this function picks the profiles.
 }
 \details{
 This function first computes how many PWLs and how many crusts are in the profiles that have a close to median total snow height HS.
-Each of these profile is then divided into several vertical levels (by \link{numberOfPWLsPerVerticalLevel}).
+Each of these profile is then divided into several vertical levels (by \link[sarp.snowprofile:numberOfPWLsPerVerticalLevel]{sarp.snowprofile::numberOfPWLsPerVerticalLevel}).
 nPWL and nCR profiles are then randomly picked from the profiles that have PWLs or CR in most vertical levels and additionally have a rather large number of PWLs/CR overall.
 The larger \code{n}, the more profiles with decreasing number of PWLs/CR in different levels are also returned. Note that this function is best applied
 to large profile sets to obtain semi-random results. For small sets, the indices returned can actually be deterministic since the pool of relevant profiles is too small.

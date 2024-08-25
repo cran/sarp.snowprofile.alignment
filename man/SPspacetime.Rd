@@ -5,7 +5,7 @@
 \alias{SPspacetime}
 \title{Additional example set of snow profiles}
 \format{
-A \link{snowprofileSet}
+A \link[sarp.snowprofile]{snowprofileSet}
 }
 \usage{
 SPspacetime

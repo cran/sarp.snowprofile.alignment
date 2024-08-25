@@ -10,7 +10,7 @@
 #'
 #'  1. extract all unique layer interfaces in both profiles
 #'  2. resample each profile with the above height grid, \cr
-#'  (!) but set all height values that exceed each's max snow height to that max snow height!
+#'  (!) but set all height values that exceed each max snow height to that max snow height!
 #'
 #' @seealso [resampleSP], [mergeIdentLayers]
 #'

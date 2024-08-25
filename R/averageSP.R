@@ -8,7 +8,7 @@
 #' For more details, refer to the reference paper.
 #'
 #' Technical note: Since the layer characteristics of the average profile represent the median characteristics of the individual profiles, it can happen that ddates of the
-#' averaged layers are not in a monotonical order. That is, of course unphysical, but we specifically decided not to override these values to highlight these slight inconsistencies
+#' averaged layers are not in a monotonic order. That is, of course non-physical, but we specifically decided not to override these values to highlight these slight inconsistencies
 #' to users, so that they can decide how to deal with them. As a consequence, the function [sarp.snowprofile::deriveDatetag] does not work for these average profiles with ddate
 #' inconsistencies, but throws an error. The suggested workaround for this issue is to apply that function to all individual profiles *before* computing the average profile. This
 #' ensures that bdates or datetags are also included in the average profile.
@@ -17,7 +17,7 @@
 #'
 #'
 #' @describeIn averageSP convenient wrapper function
-#' @param SPx SPx a [snowprofileSet] object. Note that the profile layers need to contain a column
+#' @param SPx SPx a [sarp.snowprofile::snowprofileSet] object. Note that the profile layers need to contain a column
 #' called `$layerOfInterest` which classifies weak layers. While [averageSP] will label weak layers automatically if not done by the user beforehand, [dbaSP] won't do that but fail instead!;
 #' consider thinking about how you want to label weak layers, see Description, `classifyPWLs` below, and the references.
 #' Also note, that if you wish to average the *rescaled* profile set, do so manually before calling this function (see examples).
@@ -35,6 +35,7 @@
 #' @param breakAtSim stop iterations when [simSP] between the last average profiles is beyond that value. Can range between `[0, 1]`. Default values differ between [dbaSP] and [averageSP].
 #' @param breakAfter integer specifying how many values of simSP need to be above `breakAtSim` to stop iterating. Default values differ between [dbaSP] and [averageSP].
 #' @param tz timezone of profiles; necessary for assigning the correct timezone to the average profile's ddate/bdate. Either `'auto'` or a timezone known to `[as.POSIXct]`.
+#' @param n_cores number of nodes to create for a cluster using the  parallel package to speed up calculations (default = NULL)
 #' @param ... alignment configurations which are passed on to [dbaSP] and then further to [dtwSP]. Note, that you can't provide `rescale2refHS`, which is always set to FALSE. If you wish to rescale
 #' the profiles, read the description of the `SPx` parameter and the examples.
 #' @return A list of class `avgSP` that contains the fields
@@ -127,7 +128,8 @@ averageSP <- function(SPx, n = 5, sm = summary(SPx),
                       classifyCRs = list(pwl_gtype = c("MFcr", "IF", "IFsc", "IFrc")),
                       proportionPWL = 0.5,
                       breakAtSim = 0.9, breakAfter = 2, verbose = FALSE,
-                      tz = "auto", ...) {
+                      tz = "auto",
+                      n_cores = NULL, ...) {
 
   if (!is.snowprofileSet(SPx)) stop("SPx must be a snowprofileSet")
   if (tz == "auto") {
@@ -136,7 +138,7 @@ averageSP <- function(SPx, n = 5, sm = summary(SPx),
     if (tz %in% c("NULL", "NA", NA)) tz <- ""
   }
 
-  ## if the layer objects from SPx do not contain the column '$labeledPWL', label weak layers with the provided argument list
+  ## if the layer objects from SPx do not contain the column '$layerOfInterest', label weak layers with the provided argument list
   prelabeledPWLs <- TRUE
   if (!all(sapply(SPx, function(sp) "layerOfInterest" %in% names(sp$layers)))) {
     message("Weak layers not pre-labeled for averageSP. Automatic labeling based on arguments in classifyPWLs.")
@@ -160,20 +162,47 @@ averageSP <- function(SPx, n = 5, sm = summary(SPx),
 
   ## compute average for different IC
   ## IC gets rescaled to median hs though!
-  DBA <- lapply(seq(n), function(i) {
-    tryCatch({
-      dbaSP(SPx,
-            scaleSnowHeight(SPx[[IC_ids[i]]], height = median(sm$hs))$queryScaled,  # IC profile rescaled to median hs
-            sm = sm,
-            proportionPWL = proportionPWL,
-            breakAtSim = breakAtSim, breakAfter = breakAfter,
-            verbose = verbose, tz = tz, ...)
-    },
-    error = function(err) {
-      warning(paste0("Error in averaging of profiles:\n ", err))
-      return(NA)
-    }, finally = {if (progressbar) pb$tick()})
-  })
+  ## Compute pairwise distance matrix using parallel computation if cluster object is provided
+  if (!is.null(n_cores)) {
+
+    ## Create cluster with dbaSP function loaded
+    cluster <- parallel::makeCluster(n_cores)
+    parallel::clusterExport(cluster, c('dbaSP', 'scaleSnowHeight'))
+
+    ## Loop DBA calculation
+    DBA <- parallel::parLapply(cluster, seq(n), function(i) {
+      tryCatch({
+        dbaSP(SPx,
+              scaleSnowHeight(SPx[[IC_ids[i]]], height = median(sm$hs))$queryScaled,  # IC profile rescaled to median hs
+              sm = sm,
+              proportionPWL = proportionPWL,
+              breakAtSim = breakAtSim, breakAfter = breakAfter,
+              verbose = verbose, tz = tz, ...)
+      },
+      error = function(err) {
+        warning(paste0("Error in averaging of profiles:\n ", err))
+        return(NA)
+      }, finally = {if (progressbar) pb$tick()})
+    })
+    parallel::stopCluster(cluster)
+
+  ## Non-parallel calculations
+  } else {
+    DBA <- lapply(seq(n), function(i) {
+      tryCatch({
+        dbaSP(SPx,
+              scaleSnowHeight(SPx[[IC_ids[i]]], height = median(sm$hs))$queryScaled,  # IC profile rescaled to median hs
+              sm = sm,
+              proportionPWL = proportionPWL,
+              breakAtSim = breakAtSim, breakAfter = breakAfter,
+              verbose = verbose, tz = tz, ...)
+      },
+      error = function(err) {
+        warning(paste0("Error in averaging of profiles:\n ", err))
+        return(NA)
+      }, finally = {if (progressbar) pb$tick()})
+    })
+  }
 
   ## check whether there's a meaningful result:
   DBAmeaningful <- sapply(DBA, function(dba) ifelse(all(is.na(dba)), FALSE, TRUE))
@@ -195,8 +224,6 @@ averageSP <- function(SPx, n = 5, sm = summary(SPx),
   ## append other useful information:
   ans$call <- match.call()
   ans$prelabeledPWLs <- prelabeledPWLs
-
-
 
   return(ans)
 }

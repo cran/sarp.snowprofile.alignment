@@ -18,7 +18,7 @@
 #' @param window.size.abs Instead of a `window.size` percentage, an absolute value (in *cm*!) can be provided
 #' @param ddate.window.size number of days that exclude layers from the warping window if their deposition dates
 #' differ by more than these days
-#' @param ... unused---but important to be able to provide other warping functions to [distMatSP]
+#' @param ... unused---but important to be able to provide other warping functions to [distanceSPlayers]
 #'
 #' @seealso [dtw::dtwWindowingFunctions]
 #'

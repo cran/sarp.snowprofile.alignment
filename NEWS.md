@@ -1,3 +1,15 @@
+# sarp.snowprofile.alignment 2.0.0
+
+  - Improved computation speeds of profile alignments by 
+      - making bottlenecks more efficient
+      - adding functionality for parallel computations in `distanceSP`, `averageSP` and `clusterSP`
+  - Added extended functionality to cluster snow profiles, see `clusterSP`, `plot.clusterSP`
+  - Added the vignette *Clustering snow profiles*
+  - Consolidated existing distance functions
+      - `distMatSP` is now `distanceSPlayers`
+      - `distanceSP` now works on both profile pairs and entire
+        snowprofileSets to compute pairwise distance matrices
+
 # sarp.snowprofile.alignment 1.2.2
 
   - Fixed a seldom bug in the `averageSPalongSeason` rescaling routine that would cause the function to fail without recovery

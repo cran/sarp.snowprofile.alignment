@@ -4,22 +4,14 @@
 \alias{extractFromScoringMatrix}
 \title{Extract from Scoring matrix}
 \usage{
-extractFromScoringMatrix(
-  ScoringFrame,
-  grainType1,
-  grainType2,
-  profile_handle = NULL
-)
+extractFromScoringMatrix(ScoringFrame, grainType1, grainType2)
 }
 \arguments{
 \item{ScoringFrame}{Scoring matrix of type data.frame (needs to be of symmetric, matrix like format)}
 
-\item{grainType1}{character vector (yes, vector!) of grain type contained in ScoringFrame}
+\item{grainType1}{factor vector of grain types contained in ScoringFrame}
 
 \item{grainType2}{same as \code{grainType1}}
-
-\item{profile_handle}{character or numeric handle that links a potential warning message to the set of grain types,
-if an unknown grain type is encountered (must be of length = 1)}
 }
 \value{
 numeric vector of length \code{grainType1} with the elements of \code{ScoringFrame}

@@ -7,13 +7,15 @@
 simSP(
   ref,
   qw,
-  gtype_distMat = sim2dist(grainSimilarity_evaluate(triag = FALSE)),
-  type = "HerlaEtAl2021",
+  gtype_distMat_simSP = sim2dist(grainSimilarity_evaluate(triag = FALSE)),
+  simType = "HerlaEtAl2021",
   nonMatchedSim = 0,
   nonMatchedThickness = 10,
   verbose = FALSE,
   returnDF = FALSE,
-  apply_scalingFactor = FALSE
+  apply_scalingFactor = FALSE,
+  simWeights = c(gtype = 1/3, hardness = 1/3, stability = 1/3),
+  ...
 )
 }
 \arguments{
@@ -21,10 +23,10 @@ simSP(
 
 \item{qw}{snowprofile object 2 (matched layers need to be on the same height grid of ref)}
 
-\item{gtype_distMat}{a distance matrix that stores \strong{distance} information of grain types (\emph{Be careful} to convert
+\item{gtype_distMat_simSP}{a distance matrix that stores \strong{distance} information of grain types (\emph{Be careful} to convert
 similarities, as in \link{grainSimilarity_evaluate}, into dissimilarities with \link{sim2dist}.)}
 
-\item{type}{the similarity measure can be computed in several different ways (of sophistication). See Details section.
+\item{simType}{the similarity measure can be computed in several different ways (of sophistication). See Details section.
 Possible choices
 \itemize{
 \item \code{simple}
@@ -32,6 +34,7 @@ Possible choices
 \item \code{tsa_WLdetection} & \code{rta_WLdetection}
 \item \code{layerwise} & \code{rta_scaling}
 \item \code{remotesensing}
+\item \code{wsum_scaled}
 }}
 
 \item{nonMatchedSim}{sets the similarity value of non-matched layers \verb{[0, 1]}. "indifference" = 0.5, penalty < 0.5.
@@ -50,7 +53,11 @@ Note that \link{dtwSP} sets the same value and overrides the default value in th
 \item{returnDF}{additionally return the similarities of the grain classes as data.frame (analogously to verbose);
 the return object then has the fields \verb{$sim} and \verb{$simDF}}
 
-\item{apply_scalingFactor}{Only applicable to \code{type = layerwise}: \code{TRUE} or \code{FALSE}, see Details.}
+\item{apply_scalingFactor}{Only applicable to \code{type}s \code{layerwise} and \code{wsum_scaled}: \code{TRUE} or \code{FALSE}, see Details.}
+
+\item{simWeights}{a numeric vector with exact names that specifies the weights for the weighted averaging in \code{wsum_scaled}}
+
+\item{...}{not used, but necessary to absorb unused inputs from \link{dtwSP}}
 }
 \value{
 Either a scalar similarity between \verb{[0, 1]} with 1 referring to the two profiles being identical, or
@@ -66,7 +73,7 @@ The similarity measure is compatible with top-down alignments and is symmetric w
 see Details below.}
 }
 \details{
-The first several implementation types (\strong{simple}, \strong{HerlaEtAl2021}, \strong{tsa_WLdetection}, \strong{rta_WLdetection}) represent different flavors of the approach detailed in
+Several approaches of computing the similarity measure (\strong{simple}, \strong{HerlaEtAl2021}, \strong{tsa_WLdetection}, \strong{rta_WLdetection}) represent different flavours of the approach detailed in
 Herla et al (2021). In essence, they are a simple approach to incorporate avalanche hazard relevant characteristics into the score by
 computing the score as arithmetic mean of 4 different grain type classes:
 \itemize{
@@ -93,6 +100,7 @@ Type \strong{rta_WLdetection} works analogous, but uses RTA instead of TSA and a
 Unlike the former types, \strong{layerwise} applies no weighting at all if used as per default. That means that the similarity of each individual layer
 contributes equally to the overall similarity measure. It is, however, very flexible in that any custom scaling factor can be applied to each layer. The resulting similarity score is then computed by
 \itemize{
+\item sim = sim_gtype x sim_hardness (i.e., an array of similarities, one for each layer)
 \item simSP = sum(sim * scalingFactor) / sum(scalingFactor),
 }
 
@@ -102,7 +110,20 @@ Type \strong{rta_scaling} is a special case of \code{layerwise}, where the scali
 Type \strong{remotesensing} makes use of the layerwise algorithm, but triggers an alternative similarity computation beforehand. Similarity is first computed from density and Optical Grain Size (ogs),
 and then the layerwise similarity is called upon to compute the global sim score.
 
-\strong{NOTE} that for all types that include TSA/RTA values, these values need to be computed \emph{prior to aligning} the profiles
+The newest approach \strong{wsum_scaled} differs from all approaches before on a foundational level. While all other approaches compute the similarity of two layers by \emph{multiplying} their
+similarities in various layer properties (e.g., gtype, hardness), this approach computes a \emph{weighted sum} of the similarities of three layer properties:
+gtype, hardness, layer stability. Differently than previous approaches, the layer stability is not only used for scaling purposes but also for the similarity calculation itself.
+By scaling the similarity with stability, unstable layers get more weight in the resulting score. By additionally including the similarity of layer stability in the similarity calculation,
+profiles with similar stability patterns get a higher score.
+By using a weighted sum to combine the three layer properties, the approach is identical to how the underlying alignment of the profiles is computed. The resulting similarity score is computed by
+\itemize{
+\item sim = w1 x sim_gtype + w2 x sim_hardness + w3 x sim_stability  (i.e., an array of similarities, one for each layer)
+\item simSP = sum(sim * stability) / sum(stability),
+}
+
+where layer stability defaults to p_unstable, or to scalingFactor (if apply_scalingFactor is TRUE).
+
+\strong{NOTE} that for all types that include stability indices (TSA, RTA, p_unstable, scalingFactor), these measures need to be computed \emph{prior to aligning} the profiles
 (and therefore need to be present in the profiles provided to this function!)
 }
 \examples{

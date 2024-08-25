@@ -8,6 +8,30 @@
 ## fherla
 ##
 
+
+## --- Difference in layer stability p_unstable ----
+#' Difference in layer stability p_unstable
+#'
+#' Calculate the difference (i.e. distance) in p_unstable
+#'
+#' @param pu1 numeric p_unstable values (1D array)  (within `[0, 1]`)
+#' @param pu2 numeric p_unstable values (1D array)  (within `[0, 1]`)
+#' @return numeric p_unstable distance
+#' @author fherla
+puDistance <- function(pu1, pu2) {
+
+  ## set NA values to 0 to avoid NA values in distanceSPlayers caclulations
+  ## usually only surface layers are NA --> usually not dangerous to set to 0
+  pu1[is.na(pu1)] <- 0
+  pu2[is.na(pu2)] <- 0
+
+  ## Calculate the difference between arrays
+  pudist <- abs(pu1 - pu2)
+
+  return(pudist)
+}
+
+
 ## --- Difference in layer density ----
 #' Difference in layer density
 #'
@@ -106,32 +130,28 @@ sim2dist <- function(SimMat) {
 #'
 #' Vectorized function to efficiently extract elements from scoring matrix of type data.frame
 #' @param ScoringFrame Scoring matrix of type data.frame (needs to be of symmetric, matrix like format)
-#' @param grainType1 character vector (yes, vector!) of grain type contained in ScoringFrame
+#' @param grainType1 factor vector of grain types contained in ScoringFrame
 #' @param grainType2 same as `grainType1`
-#' @param profile_handle character or numeric handle that links a potential warning message to the set of grain types,
-#' if an unknown grain type is encountered (must be of length = 1)
 #' @return numeric vector of length `grainType1` with the elements of `ScoringFrame`
 #' that are defined by `grainType1` and `grainType2`
 #' @author fherla
-#'
-extractFromScoringMatrix <- function(ScoringFrame, grainType1, grainType2,
-                                     profile_handle = NULL) {
-  if (!isTRUE(all(ScoringFrame[upper.tri(ScoringFrame)] ==
-           t(ScoringFrame)[upper.tri(ScoringFrame)]))) {
-    stop("need symmetric matrix-like dataframe!
-         upper and lower triangle are not equal.")
-  }
-  # if (any(is.na(grainType1)) | any(is.na(grainType2))) {
-  #   warning(paste0("Missing grain types in profile ", profile_handle,
-  #                  ", assigning default value as specified in ScoringFrame"))
+extractFromScoringMatrix <- function(ScoringFrame, grainType1, grainType2) {
+
+  # ## Check for matrix symmetry
+  # if (!isTRUE(all(ScoringFrame[upper.tri(ScoringFrame)] == t(ScoringFrame)[upper.tri(ScoringFrame)]))) {
+  #   stop("Need symmetric matrix-like dataframe! Upper and lower triangle are not equal.")
   # }
 
-  gT1 <- rep("na", times = length(grainType1))
-  gT1[!is.na(grainType1)] <- grainType1[!is.na(grainType1)]
-  gT2 <- rep("na", times = length(grainType2))
-  gT2[!is.na(grainType2)] <- grainType2[!is.na(grainType2)]
+  ## Set levels for factors
+  grainType1 <- factor(grainType1, levels = colnames(ScoringFrame))
+  grainType2 <- factor(grainType2, levels = colnames(ScoringFrame))
 
-  d <- ScoringFrame[cbind(gT1, gT2)]
+  ## Replace missing values with NA_integer_
+  grainType1[is.na(grainType1)] <- "na"
+  grainType2[is.na(grainType2)] <- "na"
+
+  ## Index the ScoringFrame matrix using integer indexing
+  d <- ScoringFrame[cbind(as.integer(grainType1), as.integer(grainType2))]
 
   return(d)
 }

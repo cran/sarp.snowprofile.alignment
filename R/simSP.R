@@ -8,7 +8,7 @@
 #' `simSP(P1, P2) == simSP(P2, P1)`. **Several different approaches of computing the measure have been implemented by now,
 #' see Details below.**
 #'
-#' The first several implementation types (**simple**, **HerlaEtAl2021**, **tsa_WLdetection**, **rta_WLdetection**) represent different flavors of the approach detailed in
+#' Several approaches of computing the similarity measure (**simple**, **HerlaEtAl2021**, **tsa_WLdetection**, **rta_WLdetection**) represent different flavours of the approach detailed in
 #' Herla et al (2021). In essence, they are a simple approach to incorporate avalanche hazard relevant characteristics into the score by
 #' computing the score as arithmetic mean of 4 different grain type classes:
 #'   - weak layers (wl): SH and DH
@@ -32,6 +32,7 @@
 #'
 #' Unlike the former types, **layerwise** applies no weighting at all if used as per default. That means that the similarity of each individual layer
 #' contributes equally to the overall similarity measure. It is, however, very flexible in that any custom scaling factor can be applied to each layer. The resulting similarity score is then computed by
+#'   - sim = sim_gtype x sim_hardness (i.e., an array of similarities, one for each layer)
 #'   - simSP = sum(sim * scalingFactor) / sum(scalingFactor),
 #'
 #' where the denominator ensures that the resulting score will be within `[0, 1]`. If you want to explore your own scaling approach,
@@ -40,21 +41,34 @@
 #' Type **remotesensing** makes use of the layerwise algorithm, but triggers an alternative similarity computation beforehand. Similarity is first computed from density and Optical Grain Size (ogs),
 #' and then the layerwise similarity is called upon to compute the global sim score.
 #'
+#' The newest approach **wsum_scaled** differs from all approaches before on a foundational level. While all other approaches compute the similarity of two layers by *multiplying* their
+#' similarities in various layer properties (e.g., gtype, hardness), this approach computes a *weighted sum* of the similarities of three layer properties:
+#' gtype, hardness, layer stability. Differently than previous approaches, the layer stability is not only used for scaling purposes but also for the similarity calculation itself.
+#' By scaling the similarity with stability, unstable layers get more weight in the resulting score. By additionally including the similarity of layer stability in the similarity calculation,
+#' profiles with similar stability patterns get a higher score.
+#' By using a weighted sum to combine the three layer properties, the approach is identical to how the underlying alignment of the profiles is computed. The resulting similarity score is computed by
+#'   - sim = w1 x sim_gtype + w2 x sim_hardness + w3 x sim_stability  (i.e., an array of similarities, one for each layer)
+#'   - simSP = sum(sim * stability) / sum(stability),
 #'
-#' **NOTE** that for all types that include TSA/RTA values, these values need to be computed *prior to aligning* the profiles
+#' where layer stability defaults to p_unstable, or to scalingFactor (if apply_scalingFactor is TRUE).
+#'
+#'
+#'
+#' **NOTE** that for all types that include stability indices (TSA, RTA, p_unstable, scalingFactor), these measures need to be computed *prior to aligning* the profiles
 #' (and therefore need to be present in the profiles provided to this function!)
 #'
 #' @param ref snowprofile object 1
 #' @param qw snowprofile object 2 (matched layers need to be on the same height grid of ref)
-#' @param gtype_distMat a distance matrix that stores **distance** information of grain types (*Be careful* to convert
+#' @param gtype_distMat_simSP a distance matrix that stores **distance** information of grain types (*Be careful* to convert
 #' similarities, as in [grainSimilarity_evaluate], into dissimilarities with [sim2dist].)
-#' @param type the similarity measure can be computed in several different ways (of sophistication). See Details section.
+#' @param simType the similarity measure can be computed in several different ways (of sophistication). See Details section.
 #' Possible choices
 #'   - `simple`
 #'   - `HerlaEtAl2021` (= `simple2`)
 #'   - `tsa_WLdetection` & `rta_WLdetection`
 #'   - `layerwise` & `rta_scaling`
 #'   - `remotesensing`
+#'   - `wsum_scaled`
 #' @param nonMatchedSim sets the similarity value of non-matched layers `[0, 1]`. "indifference" = 0.5, penalty < 0.5.
 #' Note that [dtwSP] sets the same value and overrides the default value in this function!
 #' @param nonMatchedThickness If `NA`, every unique non-matched layer (i.e., contiguous resampled layers with identical properties)
@@ -67,7 +81,9 @@
 #' @param verbose print similarities of different grain classes to console? default FALSE
 #' @param returnDF additionally return the similarities of the grain classes as data.frame (analogously to verbose);
 #' the return object then has the fields `$sim` and `$simDF`
-#' @param apply_scalingFactor Only applicable to `type = layerwise`: `TRUE` or `FALSE`, see Details.
+#' @param apply_scalingFactor Only applicable to `type`s `layerwise` and `wsum_scaled`: `TRUE` or `FALSE`, see Details.
+#' @param simWeights a numeric vector with exact names that specifies the weights for the weighted averaging in `wsum_scaled`
+#' @param ... not used, but necessary to absorb unused inputs from [dtwSP]
 #'
 #' @return Either a scalar similarity between `[0, 1]` with 1 referring to the two profiles being identical, or
 #' (if `returnDF` is TRUE) a list with the elements `$sim` and `$simDF`.
@@ -129,11 +145,12 @@
 #'       apply_scalingFactor = TRUE, verbose = TRUE)
 #'
 #' @export
-simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(triag = FALSE)), type = "HerlaEtAl2021",
-                  nonMatchedSim = 0, nonMatchedThickness = 10, verbose = FALSE, returnDF = FALSE, apply_scalingFactor = FALSE) {
+simSP <- function(ref, qw, gtype_distMat_simSP = sim2dist(grainSimilarity_evaluate(triag = FALSE)), simType = "HerlaEtAl2021",
+                  nonMatchedSim = 0, nonMatchedThickness = 10, verbose = FALSE, returnDF = FALSE, apply_scalingFactor = FALSE,
+                  simWeights = c(gtype = 1/3, hardness = 1/3, stability = 1/3), ...) {
 
   if (!is.snowprofile(ref) | !is.snowprofile(qw)) stop("At least one of ref and qw is not a snowprofile object!")
-  type <- tolower(type)
+  simType <- tolower(simType)
 
   ## --- height grid operations ----
   ## get number of layers from both profiles
@@ -157,19 +174,25 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
   }
 
   ## determine relevant properties based on which framework we are operating (avy or remote sensing)
-  if (type != "remotesensing") {
-    if (type %in% c("simple", "herlaetal2021", "simple2", "layerwise")) {
+  if (simType != "remotesensing") {
+    if (simType %in% c("simple", "herlaetal2021", "simple2", "layerwise", "wsum", "wsum_scaled")) {
       relevantProperties <- c("gtype", "hardness")
-      if (type == "layerwise" & apply_scalingFactor) relevantProperties <- c(relevantProperties, "scalingFactor")
-    } else if (type == "tsa_wldetection") {
+      if (simType == "layerwise" & apply_scalingFactor) {
+        relevantProperties <- c(relevantProperties, "scalingFactor")
+      } else if (simType == "wsum_scaled" & apply_scalingFactor) {
+        relevantProperties <- c(relevantProperties, "scalingFactor")
+      } else if (simType == "wsum_scaled" & "p_unstable" %in% intersect(names(ref$layers), names(qw$layers))) {
+        relevantProperties <- c(relevantProperties, "p_unstable")
+      }
+    } else if (simType == "tsa_wldetection") {
       relevantProperties <- c("gtype", "hardness", "tsa")
-    } else if (type %in% c("rta_wldetection", "rta_scaling")) {
+    } else if (simType %in% c("rta_wldetection", "rta_scaling")) {
       relevantProperties <- c("gtype", "hardness", "rta")
     } else {
       stop("Unknown similarity type!")
     }
   } # end avy possibilities
-  else if (type == "remotesensing") {
+  else if (simType == "remotesensing") {
     relevantProperties <- c("density", "ogs")
   }
 
@@ -208,14 +231,14 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
   }
 
   ## --- generic similarity calculations ----
-  if (type != "remotesensing") {
+  if (simType != "remotesensing") {
     refGrains <- as.character(rl$gtype)
     qwGrains <- as.character(qwl$gtype)
     matchedGrid <- rep(rl$height, times = 2)  # stacked, analogous to matchedDF (further down)
     nGrains <- length(refGrains)
 
     ## distances and according similarities from various dims:
-    dGT <- extractFromScoringMatrix(ScoringFrame = gtype_distMat,
+    dGT <- extractFromScoringMatrix(ScoringFrame = gtype_distMat_simSP,
                                     grainType1 = qwGrains,
                                     grainType2 = refGrains)  # vector
     simGT <- sim2dist(dGT)  # vector
@@ -228,7 +251,7 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
 
     ## combine dimensions
     sim <- (simGT * simHHI)[, 1]
-  } else if (type == "remotesensing") {
+  } else if (simType == "remotesensing") {
     ## distances and according similarities from density and ogs:
     dDensity <- densityDistance(qwl$density, rl$density, normalize = TRUE, absDist = TRUE) # vector
     simDensity <- sim2dist(dDensity)  # vector
@@ -244,7 +267,7 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
 
 
   ## --- HerlaEtAl2021, simple2 ----
-  if (type %in% c("herlaetal2021", "simple2")) {
+  if (simType %in% c("herlaetal2021", "simple2")) {
     ## separate further evaluation of similarity into grain type categories
     ## (both profiles are important i.e. aim at 'symmetric' similarity score)
     ## (1) unmatched layers get similarity 'indifferent' i.e. no penalty and no score
@@ -345,12 +368,12 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
 
     if (returnDF) return(list(sim = simSP, simDF = simDF))
     else return(simSP)
-  }  # END IF type == herlaetal2021, simple2
+  }  # END IF simType == herlaetal2021, simple2
 
 
 
   ## --- Simple ----
-  else if (type == "simple") {
+  else if (simType %in% c("simple")) {
     ## separate further evaluation of similarity into grain type categories
     ## (both profiles are important i.e. aim at 'symmetric' similarity score)
     ## (1) unmatched layers get similarity 'nonMatchedSim'
@@ -412,7 +435,7 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
     )
 
     rownames(simDF) <- "sim [0, 1]: "
-    ## combine grain type categories to simple similarity:
+    ## combine grain simType categories to simple similarity:
     simSP <- mean(as.double(simDF[1, ]), na.rm = TRUE)
 
     ## return NA in case of NULL/problem:
@@ -429,12 +452,12 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
 
     if (returnDF) return(list(sim = simSP, simDF = simDF))
     else return(simSP)
-  }  # END IF type == simple
+  }  # END IF simType == simple
 
 
 
   ## --- TSA_WLdetection ----
-  else if (type == "tsa_wldetection") {
+  else if (simType %in% c("tsa_wldetection")) {
     ## separate further evaluation of similarity into grain type categories
     ## (both profiles are important i.e. aim at 'symmetric' similarity score)
     ## (1) unmatched layers get similarity 'nonMatchedSim'
@@ -506,11 +529,11 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
 
     if (returnDF) return(list(sim = simSP, simDF = simDF))
     else return(simSP)
-  }  # END IF type == tsa_WLdtection
+  }  # END IF simType == tsa_WLdtection
 
 
   ## --- RTA_WLdetection ----
-  else if (type == "rta_wldetection") {
+  else if (simType %in% c("rta_wldetection")) {
     ## separate further evaluation of similarity into grain type categories
     ## (both profiles are important i.e. aim at 'symmetric' similarity score)
     ## (1) unmatched layers get similarity 'nonMatchedSim'
@@ -582,12 +605,12 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
 
     if (returnDF) return(list(sim = simSP, simDF = simDF))
     else return(simSP)
-  }  # END IF type == rta_WLdtection
+  }  # END IF simType == rta_WLdtection
 
 
 
   ## --- Layerwise ----
-  else if (type %in% c("layerwise", "remotesensing")) {
+  else if (simType %in% c("layerwise", "remotesensing")) {
     # remotesensing is included in the if clause because it is a layerwise alignment but with a different input generic sim
     ## create a data.frame with columns sim and (if desired) scalingFactor
     if (apply_scalingFactor){
@@ -619,12 +642,12 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
 
     if (returnDF) return(list(sim = simSP, simDF = layerDF))
     else return(simSP)
-  }  # END IF type == layerwise
+  }  # END IF simType == layerwise
 
 
 
   ## --- RTA_Scaling ----
-  else if (type == "rta_scaling") {
+  else if (simType %in% c("rta_scaling")) {
     ## create a data.frame with sim and rta columns
     if (is.data.frame(missingLayers) && nrow(missingLayers) > 0) {
       layerDF <- data.frame(rta = c(rl$rta, qwl$rta, missingLayers$rta),
@@ -644,6 +667,98 @@ simSP <- function(ref, qw, gtype_distMat = sim2dist(grainSimilarity_evaluate(tri
 
     if (returnDF) return(list(sim = simSP, simDF = layerDF))
     else return(simSP)
-  }  # END IF type == rta_scaling
+  }  # END IF simType == rta_scaling
 
-}  # END function
+
+
+  ## --- wsum_scaled ----
+  else if (simType %in% c("wsum_scaled")) {
+    ## create a data.frame with columns sim of each dim and (if desired) scalingFactor
+    if ("scalingFactor" %in% relevantProperties) {
+      if (!"scalingFactor" %in% intersect(names(rl), names(qwl))) stop("scalingFactor not avaiable in provided profile layers for wsum_scaled in simSP!")
+      simSF <- 1 - (abs(rl$scalingFactor - qwl$scalingFactor))
+      if (is.data.frame(missingLayers) && nrow(missingLayers) > 0) {
+        layerDF <- data.frame(scalingFactor = c(rl$scalingFactor, qwl$scalingFactor, missingLayers$scalingFactor),
+                              simHHI = c(simHHI$SimMat, simHHI$SimMat, rep(nonMatchedSim, times = nrow(missingLayers))),
+                              simGT = c(simGT$SimMat, simGT$SimMat, rep(nonMatchedSim, times = nrow(missingLayers))),
+                              simSF = c(simSF, simSF, rep(nonMatchedSim, times = nrow(missingLayers))))
+      } else {
+        layerDF <- data.frame(scalingFactor = c(rl$scalingFactor, qwl$scalingFactor),
+                              simHHI = c(simHHI$SimMat, simHHI$SimMat),
+                              simGT = c(simGT$SimMat, simGT$SimMat),
+                              simSF = c(simSF, simSF))
+      }
+    } else if ("p_unstable" %in% relevantProperties) {
+      simSF <- 1 - (abs(rl$p_unstable - qwl$p_unstable))
+      ## hardcode NA p_unstable values to be not NA
+      ## (somewhat dangerous if entire p_unstable column happens to be accidentally NA, but necessary to avoid NA similarities in layers. compute simSF before so that only scalingFactor is modified.)
+      rl$p_unstable[is.na(rl$p_unstable)] <- 0.2
+      qwl$p_unstable[is.na(qwl$p_unstable)] <- 0.2
+      if (is.data.frame(missingLayers) && nrow(missingLayers) > 0) {
+        layerDF <- data.frame(scalingFactor = c(rl$p_unstable, qwl$p_unstable, missingLayers$p_unstable),
+                              simHHI = c(simHHI$SimMat, simHHI$SimMat, rep(nonMatchedSim, times = nrow(missingLayers))),
+                              simGT = c(simGT$SimMat, simGT$SimMat, rep(nonMatchedSim, times = nrow(missingLayers))),
+                              simSF = c(simSF, simSF, rep(nonMatchedSim, times = nrow(missingLayers))))
+      } else {
+        layerDF <- data.frame(scalingFactor = c(rl$p_unstable, qwl$p_unstable),
+                              simHHI = c(simHHI$SimMat, simHHI$SimMat),
+                              simGT = c(simGT$SimMat, simGT$SimMat),
+                              simSF = c(simSF, simSF))
+      }
+    } else {
+      stop("p_unstable is not available in the provided profile layers for wsum_scaled approach in simSP. Either compute it, or use a custom scalingFactor!")
+    }
+
+    ## compute weighted sum of sim
+    layerDF$sim <- layerDF$simGT * simWeights["gtype"] + layerDF$simHHI * simWeights["hardness"] + layerDF$simSF * simWeights["stability"]
+    layerDF$sim[is.na(layerDF$sim)] <- rowMeans(layerDF[is.na(layerDF$sim), c("simHHI", "simGT", "simSF")], na.rm = TRUE)  # line above will yield NA sometimes; recompute those by just using standard average..
+
+    if (any(is.na(layerDF$sim))) print("simSP: NAs produced in similarity assessment of profiles. Investigate why!")
+
+    ## scale sim with scalingFactor
+    simSP <- sum(layerDF$sim * layerDF$scalingFactor, na.rm = TRUE) / sum(layerDF$scalingFactor, na.rm = TRUE)
+
+
+    if (verbose) {
+      if (apply_scalingFactor) {
+        print(paste0("custom-scaled similarity = sum(sim * scalingFactor) / sum(scalingFactor) = ", round(simSP, digits = 3)))
+      } else {
+        print(paste0("p_unstable-scaled similarity = sum(sim * p_unstable) / sum(p_unstable) = ", round(simSP, digits = 3)))
+      }
+    }
+
+    if (returnDF) return(list(sim = simSP, simDF = layerDF))
+    else return(simSP)
+  }  # END IF simType == wsum_scaled
+
+
+
+  ## --- wsum ----
+  else if (simType %in% c("wsum")) {
+    ## create a data.frame with columns sim of each dim
+      if (is.data.frame(missingLayers) && nrow(missingLayers) > 0) {
+        layerDF <- data.frame(simHHI = c(simHHI$SimMat, simHHI$SimMat, rep(nonMatchedSim, times = nrow(missingLayers))),
+                              simGT = c(simGT$SimMat, simGT$SimMat, rep(nonMatchedSim, times = nrow(missingLayers))))
+      } else {
+        layerDF <- data.frame(simHHI = c(simHHI$SimMat, simHHI$SimMat),
+                              simGT = c(simGT$SimMat, simGT$SimMat))
+      }
+    ## compute weighted sum of sim
+    layerDF$sim <- layerDF$simGT * simWeights["gtype"] + layerDF$sim_HHI * simWeights["hardness"]
+    layerDF$sim[is.na(layerDF$sim)] <- rowMeans(layerDF[is.na(layerDF$sim), c("simHHI", "simGT")], na.rm = TRUE)  # line above will yield NA sometimes; recompute those by just using standard average..
+
+    if (any(is.na(layerDF$sim))) print("simSP: NAs produced in similarity assessment of profiles. Investigate why!")
+
+    simSP <- sum(layerDF$sim) / nrow(layerDF)
+
+
+    if (verbose) {
+      print(paste0("unscaled similarity = sum(sim) / length(sim) = ", round(simSP, digits = 3)))
+    }
+
+    if (returnDF) return(list(sim = simSP, simDF = layerDF))
+    else return(simSP)
+  }  # END IF simType == wsum
+
+
+}

@@ -26,13 +26,13 @@ averageSPalongSeason(
 )
 }
 \arguments{
-\item{SPx}{a \link{snowprofileSet} that contains all profiles from the region to be averaged at all days of the season for which you want to compute the average profile.
+\item{SPx}{a \link[sarp.snowprofile:snowprofileSet]{sarp.snowprofile::snowprofileSet} that contains all profiles from the region to be averaged at all days of the season for which you want to compute the average profile.
 Identically to \link{dbaSP}, weak layers need to be labeled prior to this function call, see \link{dbaSP} and \link[sarp.snowprofile:findPWL]{sarp.snowprofile::labelPWL}. Note that only daily sampling is
 allowed at this point (i.e., one profile per grid point per day).}
 
 \item{sm}{a summary of \code{SPx} containing meta-data}
 
-\item{AvgDayBefore}{an average \link{snowprofile} from the previous day. This is only necessary if you want to resume the computation
+\item{AvgDayBefore}{an average \link[sarp.snowprofile:snowprofile]{sarp.snowprofile::snowprofile} from the previous day. This is only necessary if you want to resume the computation
 mid season.}
 
 \item{DateEnd}{an end date character string (\code{"YYYY-MM-DD"}) if you only want to compute the timeseries up to a certain point
@@ -76,7 +76,7 @@ Meaningful range is between \verb{[0.1, 0.5]}. Values larger than 0.5 get set to
 \item{...}{any other parameters passed on to \link{dbaSP} and then \link{dtwSP}.}
 }
 \value{
-A list of class \code{avgSP_timeseries} containing the fields \verb{$avgs} with a \link{snowprofileSet} of the average profiles at each day.
+A list of class \code{avgSP_timeseries} containing the fields \verb{$avgs} with a \link[sarp.snowprofile:snowprofileSet]{sarp.snowprofile::snowprofileSet} of the average profiles at each day.
 If \code{keep.profiles == TRUE} a field \verb{$sets} with the according profiles informing the average profile at each day (which can be
 used to \link{backtrackLayers} to compute summary statistics of the averaged layers). And two fields \verb{$call} and \verb{$meta}. The
 latter contains several useful meta-information such as \code{...$date}, \code{...$hs}, \code{...$hs_median}, \code{...$thicknessPPDF_median}, or \code{...$rmse}, which gauges

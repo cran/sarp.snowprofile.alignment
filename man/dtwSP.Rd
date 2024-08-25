@@ -15,10 +15,7 @@ dtwSP(
   rescale2refHS = FALSE,
   bottom.up = TRUE,
   top.down = TRUE,
-  nonMatchedSim = 0,
-  nonMatchedThickness = 10,
   simType = "HerlaEtAl2021",
-  apply_scalingFactor = FALSE,
   ...
 )
 }
@@ -46,23 +43,21 @@ To resample onto the smallest possible mutual (original, likely irregular) depth
 
 \item{top.down}{Compute an open.end alignment from the snow surface downwards?}
 
-\item{nonMatchedSim}{Similarity value \verb{[0, 1]} for non-matched layers, see \link{simSP}. indifference = 0.5, penalty < 0.5}
-
-\item{nonMatchedThickness}{How strongly should the thicknesses of non-matched layers influence the resulting similarity of
-the profiles? The smaller this (positive!) value, the more influence; and vice versa. See \link{simSP} for more details.}
-
 \item{simType}{the similarity between two profiles can be computed with different approaches, see \link{simSP}}
 
-\item{apply_scalingFactor}{Setting for \link{simSP} in case \verb{simType == "layerwise}.}
-
-\item{...}{Arguments passed to \code{\link{distMatSP}}, and \code{\link{dtw}} e.g.
+\item{...}{Arguments passed to \link{distanceSPlayers}, and \link[dtw:dtw]{dtw::dtw}, and \link{simSP} e.g.
 \itemize{
-\item \code{dims}, \code{weights} (defaults specified in \code{\link{distMatSP}})
-\item \code{ddateNorm}, numeric, normalize deposition date (default specified in \code{\link{distMatSP}})
+\item \code{dims}, \code{weights} (defaults specified in \code{\link{distanceSPlayers}})
+\item \code{ddateNorm}, numeric, normalize deposition date (default specified in \code{\link{distanceSPlayers}})
 \item \code{windowFunction}, default \code{\link{warpWindowSP}}
 \item \code{window.size}, \code{window.size.abs}, \code{ddate.window.size} (defaults specified in \code{\link{warpWindowSP}})
-\item \code{gtype_distMat}, (default specified in \code{\link{distMatSP}}), cf. e.g. \link{grainSimilarity_align}
+\item \code{gtype_distMat}, specific to profile alignment, see \link{distanceSPlayers}
+\item \code{gtype_distMat_simSP}, specific to similarity measure in \link{simSP}
 \item \code{prefLayerWeights}, weighting matrix for preferential layer matching, e.g. \link{layerWeightingMat}
+\item \code{nonMatchedSim} Similarity value \verb{[0, 1]} for non-matched layers, see \link{simSP}. indifference = 0.5, penalty < 0.5
+\item \code{nonMatchedThickness} How strongly should the thicknesses of non-matched layers influence the resulting similarity of
+the profiles? The smaller this (positive!) value, the more influence; and vice versa. See \link{simSP} for more details.
+\item \code{apply_scalingFactor} Setting for \link{simSP} in case \code{simType} is \code{"layerwise"} or \code{"wsum_scaled"}.
 }}
 }
 \value{
@@ -84,8 +79,8 @@ The individual steps of aligning snow profiles (which can all be managed from th
 \item regular grid with a sampling rate that is provided by the user (recommended, cf., \link{resampleSP}).
 \item irregular grid that includes all layer interfaces within the two profiles (i.e., set \code{resamplingRate = 'irregularInterfaces'}) (cf., \link{resampleSPpairs})
 }
-\item Compute a weighted \strong{local cost matrix} from multiple layer characteristics (cf., \link{distMatSP})
-\item \strong{Match the layers} of the profiles with a call to \link{dtw} (eponymous R package)
+\item Compute a weighted \strong{local cost matrix} from multiple layer characteristics (cf., \link{distanceSPlayers})
+\item \strong{Match the layers} of the profiles with a call to \link[dtw:dtw]{dtw::dtw} (eponymous R package)
 \item Align the profiles by \strong{warping} the query profile onto the reference profile (cf., \link{warpSP})
 \item (optional) If the function has been called with multiple different boundary conditions (global, top-down, or bottom-up alignments),
 the optimal alignment as determined by \link{simSP} or by the DTW distance will be returned.

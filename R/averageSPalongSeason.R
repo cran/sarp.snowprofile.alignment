@@ -15,11 +15,11 @@
 #'
 #' @importFrom stats filter
 #'
-#' @param SPx a [snowprofileSet] that contains all profiles from the region to be averaged at all days of the season for which you want to compute the average profile.
+#' @param SPx a [sarp.snowprofile::snowprofileSet] that contains all profiles from the region to be averaged at all days of the season for which you want to compute the average profile.
 #' Identically to [dbaSP], weak layers need to be labeled prior to this function call, see [dbaSP] and [sarp.snowprofile::labelPWL]. Note that only daily sampling is
 #' allowed at this point (i.e., one profile per grid point per day).
 #' @param sm a summary of `SPx` containing meta-data
-#' @param AvgDayBefore an average [snowprofile] from the previous day. This is only necessary if you want to resume the computation
+#' @param AvgDayBefore an average [sarp.snowprofile::snowprofile] from the previous day. This is only necessary if you want to resume the computation
 #' mid season.
 #' @param DateEnd an end date character string (`"YYYY-MM-DD"`) if you only want to compute the timeseries up to a certain point
 #' in time. Defaults to the future-most date contained in the meta-data object `sm`.
@@ -41,7 +41,7 @@
 #' @param weights a [dtwSP] parameter that sets the according weights to the `dims` specified above.
 #' @param ... any other parameters passed on to [dbaSP] and then [dtwSP].
 #'
-#' @return A list of class `avgSP_timeseries` containing the fields `$avgs` with a [snowprofileSet] of the average profiles at each day.
+#' @return A list of class `avgSP_timeseries` containing the fields `$avgs` with a [sarp.snowprofile::snowprofileSet] of the average profiles at each day.
 #' If `keep.profiles == TRUE` a field `$sets` with the according profiles informing the average profile at each day (which can be
 #' used to [backtrackLayers] to compute summary statistics of the averaged layers). And two fields `$call` and `$meta`. The
 #' latter contains several useful meta-information such as `...$date`, `...$hs`, `...$hs_median`, `...$thicknessPPDF_median`, or `...$rmse`, which gauges
@@ -117,7 +117,8 @@ averageSPalongSeason <- function(SPx,
 
   ##--- Initializations ----
   if (!is.snowprofileSet(SPx)) stop("SPx needs to be a snowprofileSet containing several locations at multiple days of the season")
-  if (!all(sapply(SPx[1:10], function(sp) "layerOfInterest" %in% names(sp$layers)))) stop("Each profile layers object needs to contain labeled weak layers/layers of interest, see documentation!")
+  nSP <- nrow(sm)
+  if (!all(sapply(SPx[1:min(10, nSP)], function(sp) "layerOfInterest" %in% names(sp$layers)))) stop("Each profile layers object needs to contain labeled weak layers/layers of interest, see documentation!")
   #                   ^-- only test first few profiles to save time, dbaSP enforces this check for each profile at a later point anyways
 
   medianHSatDate <- sapply(unique(sm$date), function(d) median(sm$hs[sm$date == d]))
@@ -215,143 +216,145 @@ averageSPalongSeason <- function(SPx,
   }
   if (progressbar) pb$tick()
 
-  for (i in seq(2, length(days))) {  # LOOP over each day
-    ## compute average profile with dbaSP
-    RES[[i]] <- tryCatch({
-      ## previous average profile is more than one day back
-      ## -> raise error that will provoke initializing a new average profile further down!
-      if (as.numeric(days[i] - days[i-1]) > 1) stop("no single layer")
-      ## call dbaSP
-      tmp <- dbaSP(SPx[sm$date == days[i]], Avg = RES[[i-1]]$avg, sm = sm[sm$date == days[i], ], keep.profiles = TRUE,
-                   proportionPWL = proportionPWL, breakAtSim = breakAtSim, breakAfter = breakAfter, verbose = verbose, resamplingRate = resamplingRate,
-                   top.down = top.down, checkGlobalAlignment = checkGlobalAlignment, prefLayerWeights = prefLayerWeights,
-                   dims = dims, weights = weights, ...)
-      tmp$avg$date <- days[i]
-      tmp$avg$reinitialized <- FALSE
-      ## ensure continuity of ddates:
-      if ("ddate" %in% names(tmp$avg$layers)) {
-        while (any(diff(tmp$avg$layers$ddate) < 0)) {
-          tmp$avg$layers$ddate[which(diff(tmp$avg$layers$ddate) < 0)] <- tmp$avg$layers$ddate[which(diff(tmp$avg$layers$ddate) < 0)+1]
+  if (length(days) > 1) {
+    for (i in seq(2, length(days))) {  # LOOP over each day
+      ## compute average profile with dbaSP
+      RES[[i]] <- tryCatch({
+        ## previous average profile is more than one day back
+        ## -> raise error that will provoke initializing a new average profile further down!
+        if (as.numeric(days[i] - days[i-1]) > 1) stop("no single layer")
+        ## call dbaSP
+        tmp <- dbaSP(SPx[sm$date == days[i]], Avg = RES[[i-1]]$avg, sm = sm[sm$date == days[i], ], keep.profiles = TRUE,
+                     proportionPWL = proportionPWL, breakAtSim = breakAtSim, breakAfter = breakAfter, verbose = verbose, resamplingRate = resamplingRate,
+                     top.down = top.down, checkGlobalAlignment = checkGlobalAlignment, prefLayerWeights = prefLayerWeights,
+                     dims = dims, weights = weights, ...)
+        tmp$avg$date <- days[i]
+        tmp$avg$reinitialized <- FALSE
+        ## ensure continuity of ddates:
+        if ("ddate" %in% names(tmp$avg$layers)) {
+          while (any(diff(tmp$avg$layers$ddate) < 0)) {
+            tmp$avg$layers$ddate[which(diff(tmp$avg$layers$ddate) < 0)] <- tmp$avg$layers$ddate[which(diff(tmp$avg$layers$ddate) < 0)+1]
+          }
+        }
+
+        ## compute today's profile's deviation from medianHS
+        dev4medianHS <- medianHSatDate[unique(sm$date) == days[i]] - tmp$avg$hs
+        if (dev4medianHS < 0) {  # avg profile is higher than medianHS
+          ## RESCALING OF PROFILE TO MATCH MEDIAN HS:
+          ## HS difference between avg and avg at previous day
+          hs_diff <- tmp$avg$hs - RES[[i-1]]$avg$hs
+          if (dailyRescaling == "settleEntireOldSnow") {
+            if (hs_diff > 0) {  # HS increased since last day
+              ## rescale old snow part (i.e. height from day before) so that new HS equals median HS
+              fac <- min((medianHSatDate[unique(sm$date) == days[i]] - hs_diff) / RES[[i-1]]$avg$hs, 1)  # max value 1 allowed!
+              k_oldSnow <- which(tmp$avg$layers$height <= RES[[i-1]]$avg$hs)
+              tmp$avg$layers$thickness[k_oldSnow] <- tmp$avg$layers$thickness[k_oldSnow] * fac
+            } else {  # HS remained constant or decreased
+              ## rescale entire profile to median HS, but don't allow factors > 1 for layer depth consistency reasons
+              fac <- min((medianHSatDate[unique(sm$date) == days[i]]) / tmp$avg$hs, 1)  # max value 1 allowed!
+              tmp$avg$layers$thickness <- tmp$avg$layers$thickness * fac
+            }
+            ## fix profile data:
+            tmp$avg$layers$height <- cumsum(tmp$avg$layers$thickness)
+            tmp$avg$layers$depth <- c(rev(cumsum(tmp$avg$layers$thickness))[-1], 0)
+            newHS <- tail(tmp$avg$layers$height, n = 1)
+            tmp$avg$maxObservedDepth <- tmp$avg$maxObservedDepth + (newHS - tmp$avg$hs)
+            tmp$avg$hs <- newHS
+            tmp$avg$backtrackingTable$height <- tmp$avg$layers$height[tmp$avg$backtrackingTable$layerID]
+
+          } else if (dailyRescaling == "settleTopOldSnow") {
+            ## find height of snow column that is consistently deeper than median layer heights (i.e., don't scale that even deeper!)
+            if (hs_diff > 0) {  # HS increased since last day
+              ## rescale old snow part (i.e. height from day before) so that new HS equals median HS
+              k_oldSnow <- which(tmp$avg$layers$height <= RES[[i-1]]$avg$hs)
+              ## smoothed ratio between medianPredominantHeight and actual avg height
+              # layerwiseFactor <- ma(tmp$avg$layers$medianPredominantHeight[k_oldSnow] / tmp$avg$layers$height[k_oldSnow])
+              layerwiseFactor <- ma(tmp$avg$layers$medianPredominantDepth[k_oldSnow] / tmp$avg$layers$depth[k_oldSnow])
+            } else {  # HS remained constant or decreased
+              ## smoothed ratio between medianPredominantHeight and actual avg height
+              # layerwiseFactor <- ma(tmp$avg$layers$medianPredominantHeight / tmp$avg$layers$height)
+              layerwiseFactor <- ma(tmp$avg$layers$medianPredominantDepth / tmp$avg$layers$depth)
+            }
+            nLF <- length(layerwiseFactor)
+            notNALF <- which(!is.na(layerwiseFactor) & !is.infinite(layerwiseFactor))  # all indices from layerwiseFactor that are not NA
+            if (length(notNALF) < 1) {
+              layerwiseFactor[] <- 1  # if all layerwiseFactor is NA --> set all to 1
+            } else {
+              layerwiseFactor[seq(max(notNALF)+1, nLF)] <- layerwiseFactor[max(notNALF)]  # replace all upper end NAs with the last non-NA value
+              layerwiseFactor[seq(1, min(notNALF)-1)] <- layerwiseFactor[min(notNALF)]  # replace all lower end NAs with the first non-NA value
+            }
+            if (all(layerwiseFactor >= 1) | all(layerwiseFactor < 1)) {
+              k_scaleDeeper_start <- 1
+            } else {
+              largestIDXleq1 <- suppressWarnings(max(which(layerwiseFactor > 1)))
+              if (is.infinite(largestIDXleq1)) largestIDXleq1 <- max(which(layerwiseFactor >= 1))
+              k_scaleDeeper_start <- max(which(layerwiseFactor[1:largestIDXleq1] < 1), 1)
+              #  note about previous line k_scaleDeeper_start:
+              #  find the largest index of values smaller than 1, but first exclude all values smaller than 1 which are located at the end of the vector,
+              #  because they lead to too few layers being rescaled, which requires negative scaling factors, which in turn breaks the snowprofileLayers object.
+              #  Additionally, offer 1 as an alternative to max function to prevent infinite results.
+            }
+            k_scaleDeeper <- k_scaleDeeper_start:nLF  ## these layers will be scaled to lower heights
+
+            ## compute static (scalar) fac(tor) that rescales to correct medianHS by altering k_scaleDeeper layers
+            fac <- min(1 + (dev4medianHS/sum(tmp$avg$layers$thickness[k_scaleDeeper])), 1)  # max value 1 alowed!
+            ## correct scaling factors that would break snowprofileLayers object (i.e., fac is too small):
+            if (fac < 0.2) {
+              correction_iteration_nr <- 1
+              mod_layerwiseFactor <- layerwiseFactor[1:min(max(which(layerwiseFactor > 1)), length(layerwiseFactor))]
+              while (fac < 0.2) {
+                fac <- tryCatch({
+                  sign_layerwiseFactor <- mod_layerwiseFactor - 1
+                  ## with each iteration, include more layers into the rescaling so that fac grows larger
+                  mod_layerwiseFactor <- suppressWarnings(mod_layerwiseFactor[1:max(which(sign(sign_layerwiseFactor) == sign(-1*sign_layerwiseFactor[length(sign_layerwiseFactor)])))])
+                  k_scaleDeeper_start <- suppressWarnings(max(which(mod_layerwiseFactor < 1)))
+                  k_scaleDeeper <- k_scaleDeeper_start:nLF
+                  min(1 + (dev4medianHS/sum(tmp$avg$layers$thickness[k_scaleDeeper])), 1)
+                }, error = function(err) err)
+
+                correction_iteration_nr <- correction_iteration_nr + 1
+                if (correction_iteration_nr > 11 | inherits(fac, "error")) {
+                  warning(paste0("Can't correctly rescale to median snow height at day ", days[i],
+                                 ". Make sure to compare the median snow height to the height of the time series."))
+                  fac <- 0.2
+                  break}}}  # while loop: scaling factor correction
+
+            ## scaling
+            tmp$avg$layers$thickness[k_scaleDeeper] <- tmp$avg$layers$thickness[k_scaleDeeper] * fac
+            tmp$avg$layers$height <- cumsum(tmp$avg$layers$thickness)
+            tmp$avg$layers$depth <- c(rev(cumsum(tmp$avg$layers$thickness))[-1], 0)
+
+            ## fix profile data:
+            newHS <- tail(tmp$avg$layers$height, n = 1)
+            tmp$avg$maxObservedDepth <- tmp$avg$maxObservedDepth + (newHS - tmp$avg$hs)
+            tmp$avg$hs <- newHS
+            tmp$avg$backtrackingTable$height <- tmp$avg$layers$height[tmp$avg$backtrackingTable$layerID]
+
+          } else {
+            stop(paste0("'dailyRescaling' == ", paste0(dailyRescaling, collapse = " "), " is not supported"))
+          }
+        }  ## END if: settlement scaling
+
+        if (!keep.profiles) tmp$set <- NULL
+        tmp
+      }, error = function(err) err)  #, warning = function(warn) warn)
+
+      ## dbaSP potential error handling
+      if (inherits(RES[[i]], "error")) {
+        ## check for a specific error raised by dbaSP and re-initialize average profile in that case:
+        if (grepl("no single layer", RES[[i]]$message)) {
+          RES[[i]] <- initializeAvg(days[i])
+        } else {  # different error --> stop computations!
+          message(paste0("\n", RES[[i]]))
+          message("\nReturning results prior to error. Resume computation by providing an AvgDayBefore to averageSPalongSeason.")
+          RES <- RES[1:(i-1)]
+          break
         }
       }
 
-      ## compute today's profile's deviation from medianHS
-      dev4medianHS <- medianHSatDate[unique(sm$date) == days[i]] - tmp$avg$hs
-      if (dev4medianHS < 0) {  # avg profile is higher than medianHS
-        ## RESCALING OF PROFILE TO MATCH MEDIAN HS:
-        ## HS difference between avg and avg at previous day
-        hs_diff <- tmp$avg$hs - RES[[i-1]]$avg$hs
-        if (dailyRescaling == "settleEntireOldSnow") {
-          if (hs_diff > 0) {  # HS increased since last day
-            ## rescale old snow part (i.e. height from day before) so that new HS equals median HS
-            fac <- min((medianHSatDate[unique(sm$date) == days[i]] - hs_diff) / RES[[i-1]]$avg$hs, 1)  # max value 1 allowed!
-            k_oldSnow <- which(tmp$avg$layers$height <= RES[[i-1]]$avg$hs)
-            tmp$avg$layers$thickness[k_oldSnow] <- tmp$avg$layers$thickness[k_oldSnow] * fac
-          } else {  # HS remained constant or decreased
-            ## rescale entire profile to median HS, but don't allow factors > 1 for layer depth consistency reasons
-            fac <- min((medianHSatDate[unique(sm$date) == days[i]]) / tmp$avg$hs, 1)  # max value 1 allowed!
-            tmp$avg$layers$thickness <- tmp$avg$layers$thickness * fac
-          }
-          ## fix profile data:
-          tmp$avg$layers$height <- cumsum(tmp$avg$layers$thickness)
-          tmp$avg$layers$depth <- c(rev(cumsum(tmp$avg$layers$thickness))[-1], 0)
-          newHS <- tail(tmp$avg$layers$height, n = 1)
-          tmp$avg$maxObservedDepth <- tmp$avg$maxObservedDepth + (newHS - tmp$avg$hs)
-          tmp$avg$hs <- newHS
-          tmp$avg$backtrackingTable$height <- tmp$avg$layers$height[tmp$avg$backtrackingTable$layerID]
-
-        } else if (dailyRescaling == "settleTopOldSnow") {
-          ## find height of snow column that is consistently deeper than median layer heights (i.e., don't scale that even deeper!)
-          if (hs_diff > 0) {  # HS increased since last day
-            ## rescale old snow part (i.e. height from day before) so that new HS equals median HS
-            k_oldSnow <- which(tmp$avg$layers$height <= RES[[i-1]]$avg$hs)
-            ## smoothed ratio between medianPredominantHeight and actual avg height
-            # layerwiseFactor <- ma(tmp$avg$layers$medianPredominantHeight[k_oldSnow] / tmp$avg$layers$height[k_oldSnow])
-            layerwiseFactor <- ma(tmp$avg$layers$medianPredominantDepth[k_oldSnow] / tmp$avg$layers$depth[k_oldSnow])
-          } else {  # HS remained constant or decreased
-            ## smoothed ratio between medianPredominantHeight and actual avg height
-            # layerwiseFactor <- ma(tmp$avg$layers$medianPredominantHeight / tmp$avg$layers$height)
-            layerwiseFactor <- ma(tmp$avg$layers$medianPredominantDepth / tmp$avg$layers$depth)
-          }
-          nLF <- length(layerwiseFactor)
-          notNALF <- which(!is.na(layerwiseFactor) & !is.infinite(layerwiseFactor))  # all indices from layerwiseFactor that are not NA
-          if (length(notNALF) < 1) {
-            layerwiseFactor[] <- 1  # if all layerwiseFactor is NA --> set all to 1
-          } else {
-            layerwiseFactor[seq(max(notNALF)+1, nLF)] <- layerwiseFactor[max(notNALF)]  # replace all upper end NAs with the last non-NA value
-            layerwiseFactor[seq(1, min(notNALF)-1)] <- layerwiseFactor[min(notNALF)]  # replace all lower end NAs with the first non-NA value
-          }
-          if (all(layerwiseFactor >= 1) | all(layerwiseFactor < 1)) {
-            k_scaleDeeper_start <- 1
-          } else {
-            largestIDXleq1 <- suppressWarnings(max(which(layerwiseFactor > 1)))
-            if (is.infinite(largestIDXleq1)) largestIDXleq1 <- max(which(layerwiseFactor >= 1))
-            k_scaleDeeper_start <- max(which(layerwiseFactor[1:largestIDXleq1] < 1), 1)
-            #  note about previous line k_scaleDeeper_start:
-            #  find the largest index of values smaller than 1, but first exclude all values smaller than 1 which are located at the end of the vector,
-            #  because they lead to too few layers being rescaled, which requires negative scaling factors, which in turn breaks the snowprofileLayers object.
-            #  Additionally, offer 1 as an alternative to max function to prevent infinite results.
-          }
-          k_scaleDeeper <- k_scaleDeeper_start:nLF  ## these layers will be scaled to lower heights
-
-          ## compute static (scalar) fac(tor) that rescales to correct medianHS by altering k_scaleDeeper layers
-          fac <- min(1 + (dev4medianHS/sum(tmp$avg$layers$thickness[k_scaleDeeper])), 1)  # max value 1 alowed!
-          ## correct scaling factors that would break snowprofileLayers object (i.e., fac is too small):
-          if (fac < 0.2) {
-            correction_iteration_nr <- 1
-            mod_layerwiseFactor <- layerwiseFactor[1:min(max(which(layerwiseFactor > 1)), length(layerwiseFactor))]
-            while (fac < 0.2) {
-              fac <- tryCatch({
-                sign_layerwiseFactor <- mod_layerwiseFactor - 1
-                ## with each iteration, include more layers into the rescaling so that fac grows larger
-                mod_layerwiseFactor <- suppressWarnings(mod_layerwiseFactor[1:max(which(sign(sign_layerwiseFactor) == sign(-1*sign_layerwiseFactor[length(sign_layerwiseFactor)])))])
-                k_scaleDeeper_start <- suppressWarnings(max(which(mod_layerwiseFactor < 1)))
-                k_scaleDeeper <- k_scaleDeeper_start:nLF
-                min(1 + (dev4medianHS/sum(tmp$avg$layers$thickness[k_scaleDeeper])), 1)
-              }, error = function(err) err)
-
-              correction_iteration_nr <- correction_iteration_nr + 1
-              if (correction_iteration_nr > 11 | inherits(fac, "error")) {
-                warning(paste0("Can't correctly rescale to median snow height at day ", days[i],
-                ". Make sure to compare the median snow height to the height of the time series."))
-                fac <- 0.2
-                break}}}  # while loop: scaling factor correction
-
-          ## scaling
-          tmp$avg$layers$thickness[k_scaleDeeper] <- tmp$avg$layers$thickness[k_scaleDeeper] * fac
-          tmp$avg$layers$height <- cumsum(tmp$avg$layers$thickness)
-          tmp$avg$layers$depth <- c(rev(cumsum(tmp$avg$layers$thickness))[-1], 0)
-
-          ## fix profile data:
-          newHS <- tail(tmp$avg$layers$height, n = 1)
-          tmp$avg$maxObservedDepth <- tmp$avg$maxObservedDepth + (newHS - tmp$avg$hs)
-          tmp$avg$hs <- newHS
-          tmp$avg$backtrackingTable$height <- tmp$avg$layers$height[tmp$avg$backtrackingTable$layerID]
-
-        } else {
-          stop(paste0("'dailyRescaling' == ", paste0(dailyRescaling, collapse = " "), " is not supported"))
-        }
-      }  ## END if: settlement scaling
-
-      if (!keep.profiles) tmp$set <- NULL
-      tmp
-    }, error = function(err) err)  #, warning = function(warn) warn)
-
-    ## dbaSP potential error handling
-    if (inherits(RES[[i]], "error")) {
-      ## check for a specific error raised by dbaSP and re-initialize average profile in that case:
-      if (grepl("no single layer", RES[[i]]$message)) {
-        RES[[i]] <- initializeAvg(days[i])
-      } else {  # different error --> stop computations!
-        message(paste0("\n", RES[[i]]))
-        message("\nReturning results prior to error. Resume computation by providing an AvgDayBefore to averageSPalongSeason.")
-        RES <- RES[1:(i-1)]
-        break
-      }
-    }
-
-    if (progressbar) pb$tick()
-  }  # END LOOP over each day
+      if (progressbar) pb$tick()
+    }  # END LOOP over each day
+  }
 
   ##--- Format output ----
   if (!initialize){

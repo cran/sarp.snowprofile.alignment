@@ -65,7 +65,7 @@ plotCostDensitySP <- function(alignment, localCost = TRUE, labelHeight = FALSE, 
   oldpar <- par(no.readonly = TRUE)
   on.exit(par(oldpar))
 
-  if (!isFALSE(target)) {
+  if (!identical(target, FALSE)) {
     online <- FALSE
     if (length(target) == 1) online <- TRUE
     else if (length(target) == 2) target <- matrix(target, ncol = 2)
@@ -115,7 +115,7 @@ plotCostDensitySP <- function(alignment, localCost = TRUE, labelHeight = FALSE, 
     if (any(diff(x) == 0)) x <- hackMonotonicity(x)
     if (any(diff(y) == 0)) y <- hackMonotonicity(y)
     ## convert target into Height coordinates
-    if (!isFALSE(target)) {
+    if (!identical(target, FALSE)) {
       if (!online) target <- matrix(c(x[target[, 1]], y[target[, 2]]), ncol = 2, byrow = F)
     }
   } else {
@@ -171,7 +171,7 @@ plotCostDensitySP <- function(alignment, localCost = TRUE, labelHeight = FALSE, 
     }
 
     ## draw target cross:
-    if (!isFALSE(target)) {
+    if (!identical(target, FALSE)) {
       if (online) target <- matrix(c(x[alignment$index1[target]], y[alignment$index2[target]]), ncol = 2, byrow = F)
       points(target[, 1], target[, 2], pch = 19, cex = tcex)
       for (i in nrow(target)) {
@@ -210,7 +210,7 @@ plotCostDensitySP <- function(alignment, localCost = TRUE, labelHeight = FALSE, 
     )
     axis(2, at = 1:5, labels = c('F', '4F', '1F', 'P', 'K'))
     ## overdraw to emphasize:
-    if (!isFALSE(target)) {
+    if (!identical(target, FALSE)) {
       hardness_mod <- alignment$query$layers$hardness
       hardness_mod[emphTHOSE_qu] <- 0
       barplot(hardness_mod,
@@ -234,7 +234,7 @@ plotCostDensitySP <- function(alignment, localCost = TRUE, labelHeight = FALSE, 
     )
     axis(1, at = 1:5, labels = c('F', '4F', '1F', 'P', 'K'))
     ## overdraw to emphasize:
-    if (!isFALSE(target)) {
+    if (!identical(target, FALSE)) {
       hardness_mod <- alignment$reference$layers$hardness
       hardness_mod[emphTHOSE_r] <- 0
       barplot(hardness_mod,

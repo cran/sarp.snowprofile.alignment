@@ -35,7 +35,7 @@ The smallest common height grid is found by
 \enumerate{
 \item extract all unique layer interfaces in both profiles
 \item resample each profile with the above height grid, \cr
-(!) but set all height values that exceed each's max snow height to that max snow height!
+(!) but set all height values that exceed each max snow height to that max snow height!
 }
 }
 \examples{

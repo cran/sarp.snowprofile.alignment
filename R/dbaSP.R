@@ -2,7 +2,7 @@
 #' @importFrom graphics rect
 #'
 #' @describeIn averageSP DTW barycenter averaging of snow profiles (low level worker function)
-#' @param Avg  the initial average snow profile: either a [snowprofile] object or an index to an initial average profile in SPx
+#' @param Avg  the initial average snow profile: either a [sarp.snowprofile::snowprofile] object or an index to an initial average profile in SPx
 #' @param resamplingRate Resampling rate for a regular depth grid among the profiles
 #' @param maxiter maximum number of iterations
 #' @param plotChanges specify whether and how you want to plot the dba process: either `FALSE`, 'TRUE` == `'iterations'`, or `'averages+last'`
@@ -238,7 +238,7 @@ dbaSP <- function(SPx, Avg, sm = summary(SPx),
     sim[i] <- simSP(Avg, Avg_old, type = simType)
     if (verbose) print(paste0("Iteration ", i, ": Similarity between old and new Avg = ", sim[i]))
 
-    if (!isFALSE(plotChanges)) {
+    if (!identical(plotChanges, FALSE)) {
       ## pre-compute required plotting data
       ## get rectangle coordinates:
       xx <- DF[, ".id"]

@@ -4,7 +4,7 @@
 #'
 #' @docType data
 #'
-#' @format A [snowprofileSet]
+#' @format A \link[sarp.snowprofile]{snowprofileSet}
 #'
 #' @seealso [SPgroup2]
 #'
